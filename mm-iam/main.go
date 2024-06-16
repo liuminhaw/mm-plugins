@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/go-plugin"
@@ -35,16 +34,20 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 	)
 
 	client := iam.NewFromConfig(cfg)
-	usersPaginator := iam.NewListUsersPaginator(client, &iam.ListUsersInput{})
-	for usersPaginator.HasMorePages() {
-		page, err := usersPaginator.NextPage(context.Background())
-		if err != nil {
-			return nil, fmt.Errorf("failed to list iam users, %w", err)
-		}
 
-		// Show users
-		for _, user := range page.Users {
-			log.Printf("IAM Username: %s\n", aws.ToString(user.UserName))
+	for _, resourceType := range miningResources {
+		log.Printf("reosource type: %s\n", resourceType)
+		resourceCrawler, err := New(client, resourceType)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create new crawler: %w", err)
+		}
+		log.Println("before generate")
+		resource, err := resourceCrawler.generate()
+		log.Println("after generate")
+		if err != nil {
+			log.Printf("Failed to get %s properties: %v", resourceType, err)
+		} else {
+			resources = append(resources, resource)
 		}
 	}
 
