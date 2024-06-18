@@ -8,8 +8,8 @@ import (
 )
 
 type crawler interface {
-	fetchConf() error
-	generate() (shared.MinerResource, error)
+	fetchConf(any) error
+	generate(*caching) (shared.MinerResource, error)
 }
 
 type propConstructor func(client *iam.Client) crawler

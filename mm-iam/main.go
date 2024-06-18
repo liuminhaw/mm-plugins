@@ -35,15 +35,14 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 
 	client := iam.NewFromConfig(cfg)
 
+	memory := caching{}
 	for _, resourceType := range miningResources {
 		log.Printf("reosource type: %s\n", resourceType)
 		resourceCrawler, err := New(client, resourceType)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to create new crawler: %w", err)
 		}
-		log.Println("before generate")
-		resource, err := resourceCrawler.generate()
-		log.Println("after generate")
+		resource, err := resourceCrawler.generate(&memory)
 		if err != nil {
 			log.Printf("Failed to get %s properties: %v", resourceType, err)
 		} else {
