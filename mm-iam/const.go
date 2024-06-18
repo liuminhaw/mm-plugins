@@ -3,11 +3,13 @@ package main
 import "fmt"
 
 const (
-	iamUser = "Users"
+	iamUser   = "Users"
+	accessKey = "AccessKey"
 )
 
 var miningResources = []string{
 	iamUser,
+	accessKey,
 }
 
 type mmIAMError struct {

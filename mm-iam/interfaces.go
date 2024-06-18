@@ -20,6 +20,11 @@ var propConstructors = map[string]propConstructor{
 			client: client,
 		}
 	},
+	accessKey: func(client *iam.Client) crawler {
+		return &accessKeyResource{
+			client: client,
+		}
+	},
 }
 
 func New(client *iam.Client, propType string) (crawler, error) {
