@@ -20,11 +20,31 @@ var propConstructors = map[string]propConstructor{
 			client: client,
 		}
 	},
+	iamGroup: func(client *iam.Client) crawler {
+		return &groupResource{
+			client: client,
+		}
+	},
+    iamInstanceProfile: func(client *iam.Client) crawler {
+        return &instanceProfileResource{
+            client: client,
+        }
+    },
 	accessKey: func(client *iam.Client) crawler {
 		return &accessKeyResource{
 			client: client,
 		}
 	},
+	accountAlias: func(client *iam.Client) crawler {
+		return &accountAliasResource{
+			client: client,
+		}
+	},
+    mfaDevice: func(client *iam.Client) crawler {
+        return &mfaDeviceResource{
+            client: client,
+        }
+    },
 }
 
 func New(client *iam.Client, propType string) (crawler, error) {

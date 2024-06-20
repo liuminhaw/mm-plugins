@@ -3,13 +3,23 @@ package main
 import "fmt"
 
 const (
-	iamUser   = "Users"
-	accessKey = "AccessKey"
+	accountAlias       = "AccountAlias"
+	accessKey          = "AccessKey"
+	iamGroup           = "Groups"
+	iamInstanceProfile = "InstanceProfiles"
+	iamUser            = "Users"
+    mfaDevice          = "MFADevices"
 )
 
 var miningResources = []string{
 	iamUser,
+	iamGroup,
+	iamInstanceProfile,
+	accountAlias,
+	// acessKey will use username cache, should be placed after iamUser
 	accessKey,
+    // mfaDevice will use username cache, should be placed after iamUser
+    mfaDevice,
 }
 
 type mmIAMError struct {
