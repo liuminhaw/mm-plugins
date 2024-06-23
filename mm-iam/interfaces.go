@@ -15,11 +15,11 @@ type crawler interface {
 type propConstructor func(client *iam.Client) crawler
 
 var propConstructors = map[string]propConstructor{
-	iamUser: func(client *iam.Client) crawler {
-		return &userResource{
-			client: client,
-		}
-	},
+	// iamUser: func(client *iam.Client) crawler {
+	// 	return &userResource{
+	// 		client: client,
+	// 	}
+	// },
 	iamGroup: func(client *iam.Client) crawler {
 		return &groupResource{
 			client: client,
@@ -47,7 +47,7 @@ var propConstructors = map[string]propConstructor{
     },
 }
 
-func New(client *iam.Client, propType string) (crawler, error) {
+func NewCrawler(client *iam.Client, propType string) (crawler, error) {
 	constructor, ok := propConstructors[propType]
 	if !ok {
 		return nil, fmt.Errorf("New crawler: unknown property type: %s", propType)

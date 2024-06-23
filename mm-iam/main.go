@@ -35,19 +35,40 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 
 	client := iam.NewFromConfig(cfg)
 
-	memory := caching{}
+	memory := newCaching()
+    if err := memory.readUsernames(client); err != nil {
+        return nil, fmt.Errorf("mine: %w", err)
+    }
+
 	for _, resourceType := range miningResources {
-		log.Printf("reosource type: %s\n", resourceType)
-		resourceCrawler, err := New(client, resourceType)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to create new crawler: %w", err)
-		}
-		resource, err := resourceCrawler.generate(&memory)
-		if err != nil {
-			log.Printf("Failed to get %s properties: %v", resourceType, err)
-		} else {
-			resources = append(resources, resource)
-		}
+		log.Printf("resource type: %s\n", resourceType)
+
+        // var resource shared.MinerResource
+        switch resourceType {
+        case iamUser:
+            for _, username := range memory.usernames {
+                log.Printf("Get user: %s", username)
+                // userCrawler := userResource{client: client}
+                userCrawler := NewUserResource(client)
+                resource, err := userCrawler.generate(username)
+                if err != nil {
+                    log.Printf("Failed to get %s user: %s", username, err)
+                } else {
+                    resources = append(resources, resource)
+                }
+            }
+        }
+
+		// resourceCrawler, err := New(client, resourceType)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("Failed to create new crawler: %w", err)
+		// }
+		// resource, err := resourceCrawler.generate(&memory)
+		// if err != nil {
+		// 	log.Printf("Failed to get %s properties: %v", resourceType, err)
+		// } else {
+		// 	resources = append(resources, resource)
+		// }
 	}
 
 	return resources, nil
