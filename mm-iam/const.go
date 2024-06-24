@@ -6,6 +6,7 @@ const (
 	// users
 	userDetail       = "UserDetail"
 	userLoginProfile = "UserLoginProfile"
+	userAccessKey    = "UserAccessKey"
 
 	accountAlias       = "AccountAlias"
 	accessKey          = "AccessKey"
