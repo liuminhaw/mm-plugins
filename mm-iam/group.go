@@ -56,4 +56,3 @@ func (gr *groupResource) generate(memory *caching) (shared.MinerResource, error)
 
 	return resource, nil
 }
-

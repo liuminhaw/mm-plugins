@@ -9,48 +9,56 @@ import (
 
 type crawler interface {
 	fetchConf(any) error
-	generate(*caching) (shared.MinerResource, error)
+	generate(*caching, int) (shared.MinerResource, error)
 }
 
-type propConstructor func(client *iam.Client) crawler
+type crawlerConstructor func(client *iam.Client) crawler
 
-var propConstructors = map[string]propConstructor{
-	// iamUser: func(client *iam.Client) crawler {
-	// 	return &userResource{
-	// 		client: client,
-	// 	}
-	// },
-	iamGroup: func(client *iam.Client) crawler {
-		return &groupResource{
+var crawlerConstructors = map[string]crawlerConstructor{
+	iamUser: func(client *iam.Client) crawler {
+		return &userResource{
 			client: client,
 		}
 	},
-    iamInstanceProfile: func(client *iam.Client) crawler {
-        return &instanceProfileResource{
-            client: client,
-        }
-    },
-	accessKey: func(client *iam.Client) crawler {
-		return &accessKeyResource{
-			client: client,
-		}
-	},
-	accountAlias: func(client *iam.Client) crawler {
-		return &accountAliasResource{
-			client: client,
-		}
-	},
-    mfaDevice: func(client *iam.Client) crawler {
-        return &mfaDeviceResource{
-            client: client,
-        }
-    },
 }
 
-func NewCrawler(client *iam.Client, propType string) (crawler, error) {
-	constructor, ok := propConstructors[propType]
+func NewCrawler(client *iam.Client, resourceType string) (crawler, error) {
+	constructor, ok := crawlerConstructors[resourceType]
 	if !ok {
-		return nil, fmt.Errorf("New crawler: unknown property type: %s", propType)
+		return nil, fmt.Errorf("New crawler: unknown property type: %s", resourceType)
+	}
+	return constructor(client), nil
+}
+
+type propsCrawler interface {
+	fetchConf(any) error
+	generate(string) ([]shared.MinerProperty, error)
+}
+
+type propsCrawlerConstructor func(client *iam.Client) propsCrawler
+
+var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
+	userDetail: func(client *iam.Client) propsCrawler {
+		return &userDetailMiner{
+			client: client,
+		}
+	},
+	userLoginProfile: func(client *iam.Client) propsCrawler {
+		return &userLoginProfileMiner{
+			client: client,
+		}
+	},
+	userAccessKey: func(client *iam.Client) propsCrawler {
+		return &userAccessKeyMiner{
+			client: client,
+		}
+	},
+}
+
+func newPropsCrawler(client *iam.Client, propType string) (propsCrawler, error) {
+	constructor, ok := propsCrawlerConstructors[propType]
+	if !ok {
+		return nil, fmt.Errorf("New props crawler: unknown property type: %s", propType)
 	}
 	return constructor(client), nil
 }

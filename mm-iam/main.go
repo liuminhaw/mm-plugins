@@ -36,30 +36,41 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 	client := iam.NewFromConfig(cfg)
 
 	memory := newCaching()
-    if err := memory.readUsernames(client); err != nil {
-        return nil, fmt.Errorf("mine: %w", err)
-    }
+	if err := memory.readUsers(client); err != nil {
+		return nil, fmt.Errorf("mine: %w", err)
+	}
 
 	for _, resourceType := range miningResources {
 		log.Printf("resource type: %s\n", resourceType)
 
-        // var resource shared.MinerResource
-        switch resourceType {
-        case iamUser:
-            for _, username := range memory.usernames {
-                log.Printf("Get user: %s", username)
-                // userCrawler := userResource{client: client}
-                userCrawler := NewUserResource(client)
-                resource, err := userCrawler.generate(username)
-                if err != nil {
-                    log.Printf("Failed to get %s user: %s", username, err)
-                } else {
-                    resources = append(resources, resource)
-                }
-            }
-        }
+		var resource shared.MinerResource
+		switch resourceType {
+		case iamUser:
+			for i, user := range memory.users {
+				log.Printf("Get user: %s", user.name)
+				resourceCrawler, err := NewCrawler(client, resourceType)
+				if err != nil {
+					return nil, fmt.Errorf("Failed to create new crawler: %w", err)
+				}
+				resource, err = resourceCrawler.generate(memory, i)
+				if err != nil {
+					log.Printf("Failed to get %s properties: %v", resourceType, err)
+				} else {
+					resources = append(resources, resource)
+				}
+				// userCrawler := NewUserResource(client)
+				// resource, err := userCrawler.generate(username)
+				// if err != nil {
+				//     log.Printf("Failed to get %s user: %s", username, err)
+				// } else {
+				//     resources = append(resources, resource)
+				// }
+			}
+		default:
+			log.Printf("resource type: %s\n", resourceType)
+		}
 
-		// resourceCrawler, err := New(client, resourceType)
+		// resourceCrawler, err := NewCrawler(client, resourceType)
 		// if err != nil {
 		// 	return nil, fmt.Errorf("Failed to create new crawler: %w", err)
 		// }

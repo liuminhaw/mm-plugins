@@ -34,24 +34,24 @@ func (ar *accountAliasResource) generate(memory *caching) (shared.MinerResource,
 			)
 		}
 
-        for _, alias := range page.AccountAliases {
-            property := shared.MinerProperty{
-                Type: "Alias",
-                Label: shared.MinerPropertyLabel{
-                    Name: "Alias",
-                    Unique: true,
-                },
-                Content: shared.MinerPropertyContent{
-                    Format: shared.FormatText,
-                },
-            }
-            if err := property.FormatContentValue(alias); err != nil {
-                return resource, fmt.Errorf("generate accountAliasResource: %w", err)
-            }
+		for _, alias := range page.AccountAliases {
+			property := shared.MinerProperty{
+				Type: "Alias",
+				Label: shared.MinerPropertyLabel{
+					Name:   "Alias",
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatText,
+				},
+			}
+			if err := property.FormatContentValue(alias); err != nil {
+				return resource, fmt.Errorf("generate accountAliasResource: %w", err)
+			}
 
-            resource.Properties = append(resource.Properties, property)
-        }
+			resource.Properties = append(resource.Properties, property)
+		}
 	}
 
-    return resource, nil
+	return resource, nil
 }

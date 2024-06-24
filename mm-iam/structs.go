@@ -8,17 +8,22 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
+type userCache struct {
+	name string
+	id   string
+}
+
 type caching struct {
-	usernames []string
+	users []userCache
 }
 
 func newCaching() *caching {
-    return &caching{ 
-        usernames: []string{},
-    }
+	return &caching{
+		users: []userCache{},
+	}
 }
 
-func (c *caching) readUsernames(client *iam.Client) error {
+func (c *caching) readUsers(client *iam.Client) error {
 	paginator := iam.NewListUsersPaginator(client, &iam.ListUsersInput{})
 
 	for paginator.HasMorePages() {
@@ -28,9 +33,13 @@ func (c *caching) readUsernames(client *iam.Client) error {
 		}
 
 		for _, user := range page.Users {
-			c.usernames = append(c.usernames, aws.ToString(user.UserName))
+			c.users = append(c.users, userCache{
+				name: aws.ToString(user.UserName),
+				id:   aws.ToString(user.UserId),
+			})
+			// c.usernames = append(c.usernames, aws.ToString(user.UserName))
 		}
 	}
 
-    return nil
+	return nil
 }

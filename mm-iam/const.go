@@ -20,13 +20,19 @@ const (
 
 var miningResources = []string{
 	iamUser,
-	iamGroup,
-	iamInstanceProfile,
-	accountAlias,
+	// iamGroup,
+	// iamInstanceProfile,
+	// accountAlias,
 	// acessKey will use username cache, should be placed after iamUser
-	accessKey,
+	// accessKey,
 	// mfaDevice will use username cache, should be placed after iamUser
-	mfaDevice,
+	// mfaDevice,
+}
+
+var miningUserProps = []string{
+	userDetail,
+	userLoginProfile,
+	userAccessKey,
 }
 
 type mmIAMError struct {
