@@ -7,6 +7,7 @@ const (
 	userDetail       = "UserDetail"
 	userLoginProfile = "UserLoginProfile"
 	userAccessKey    = "UserAccessKey"
+	userMFADevice    = "UserMFADevice"
 
 	accountAlias       = "AccountAlias"
 	accessKey          = "AccessKey"
@@ -33,6 +34,7 @@ var miningUserProps = []string{
 	userDetail,
 	userLoginProfile,
 	userAccessKey,
+	userMFADevice,
 }
 
 type mmIAMError struct {

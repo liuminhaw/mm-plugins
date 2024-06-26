@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -38,7 +39,6 @@ func (u *userResource) generate(mem *caching, idx int) (shared.MinerResource, er
 		if err != nil {
 			return resource, fmt.Errorf("generate userResource: %w", err)
 		}
-		log.Printf("userPropsCrawler: %v\n", userPropsCrawler)
 		userProps, err := userPropsCrawler.generate(mem.users[idx].name)
 		if err != nil {
 			var configErr *mmIAMError
@@ -203,4 +203,80 @@ func (uak *userAccessKeyMiner) generate(username string) ([]shared.MinerProperty
 	}
 
 	return properties, nil
+}
+
+type userMFADeviceMiner struct {
+	client    *iam.Client
+	paginator *iam.ListMFADevicesPaginator
+}
+
+func (umd *userMFADeviceMiner) fetchConf(input any) error {
+	listMFADevicesInput, ok := input.(*iam.ListMFADevicesInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListMFADevicesInput type assertion failed")
+	}
+
+	umd.paginator = iam.NewListMFADevicesPaginator(umd.client, listMFADevicesInput)
+	return nil
+}
+
+func (umd *userMFADeviceMiner) generate(username string) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := umd.fetchConf(&iam.ListMFADevicesInput{UserName: aws.String(username)}); err != nil {
+		return properties, fmt.Errorf("generate userMFADevice: %w", err)
+	}
+
+	for umd.paginator.HasMorePages() {
+		page, err := umd.paginator.NextPage(context.Background())
+		if err != nil {
+			return []shared.MinerProperty{}, fmt.Errorf("generate user MFADevice: %w", err)
+		}
+
+		for _, mfaDevice := range page.MFADevices {
+			// var property shared.MinerProperty
+			property := shared.MinerProperty{
+				Type: userMFADevice,
+				Label: shared.MinerPropertyLabel{
+					Name:   aws.ToString(mfaDevice.SerialNumber),
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatJson,
+				},
+			}
+
+			// Check device type (virtual or hardware)
+			if strings.Contains(aws.ToString(mfaDevice.SerialNumber), "mfa/") {
+				log.Printf(
+					"device: %s, type: virtual MFA Device",
+					aws.ToString(mfaDevice.SerialNumber),
+				)
+				if err = property.FormatContentValue(mfaDevice); err != nil {
+					return []shared.MinerProperty{}, fmt.Errorf("generate user MFADevice: %w", err)
+				}
+			} else {
+				log.Printf("device: %s, type: hardware MFA Device", aws.ToString(mfaDevice.SerialNumber))
+				device, err := umd.client.GetMFADevice(
+					context.Background(),
+					&iam.GetMFADeviceInput{SerialNumber: mfaDevice.SerialNumber},
+				)
+				if err != nil {
+					return []shared.MinerProperty{}, fmt.Errorf("generate user MFADevice: %w", err)
+				}
+				property.Label.Name = aws.ToString(device.SerialNumber)
+				if err = property.FormatContentValue(device); err != nil {
+					return []shared.MinerProperty{}, fmt.Errorf("generate user MFADevice: %w", err)
+				}
+			}
+
+			properties = append(properties, property)
+		}
+	}
+
+	return properties, nil
+}
+
+type userSSHPublicKeyMiner struct {
+    client *iam.Client
 }

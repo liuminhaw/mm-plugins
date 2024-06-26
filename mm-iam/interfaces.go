@@ -53,6 +53,11 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 			client: client,
 		}
 	},
+	userMFADevice: func(client *iam.Client) propsCrawler {
+		return &userMFADeviceMiner{
+			client: client,
+		}
+	},
 }
 
 func newPropsCrawler(client *iam.Client, propType string) (propsCrawler, error) {
