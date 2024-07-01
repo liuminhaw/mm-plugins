@@ -58,6 +58,16 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 			client: client,
 		}
 	},
+	userSSHPublicKey: func(client *iam.Client) propsCrawler {
+		return &userSSHPublicKeyMiner{
+			client: client,
+		}
+	},
+	userServiceSpecificCredential: func(client *iam.Client) propsCrawler {
+		return &userServiceSpecificCredentialMiner{
+			client: client,
+		}
+	},
 }
 
 func newPropsCrawler(client *iam.Client, propType string) (propsCrawler, error) {

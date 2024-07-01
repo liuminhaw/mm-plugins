@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/smithy-go"
 	"github.com/liuminhaw/mist-miner/shared"
 )
@@ -278,5 +279,115 @@ func (umd *userMFADeviceMiner) generate(username string) ([]shared.MinerProperty
 }
 
 type userSSHPublicKeyMiner struct {
-    client *iam.Client
+	client    *iam.Client
+	paginator *iam.ListSSHPublicKeysPaginator
+}
+
+func (uspk *userSSHPublicKeyMiner) fetchConf(input any) error {
+	sshPulicKeyInput, ok := input.(*iam.ListSSHPublicKeysInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListSSHPublicKeysInput type assertion failed")
+	}
+
+	uspk.paginator = iam.NewListSSHPublicKeysPaginator(uspk.client, sshPulicKeyInput)
+	return nil
+}
+
+func (uspk *userSSHPublicKeyMiner) generate(username string) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := uspk.fetchConf(&iam.ListSSHPublicKeysInput{UserName: aws.String(username)}); err != nil {
+		return properties, fmt.Errorf("generate userSSHPublicKey: %w", err)
+	}
+
+	for uspk.paginator.HasMorePages() {
+		page, err := uspk.paginator.NextPage(context.Background())
+		if err != nil {
+			return []shared.MinerProperty{}, fmt.Errorf("generate user SSHPublicKey: %w", err)
+		}
+
+		for _, keyMetadata := range page.SSHPublicKeys {
+			output, err := uspk.client.GetSSHPublicKey(
+				context.Background(),
+				&iam.GetSSHPublicKeyInput{
+					Encoding:       types.EncodingTypePem,
+					SSHPublicKeyId: keyMetadata.SSHPublicKeyId,
+					UserName:       aws.String(username),
+				},
+			)
+			if err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate user SSHPublicKey: %w", err)
+			}
+
+			property := shared.MinerProperty{
+				Type: userSSHPublicKey,
+				Label: shared.MinerPropertyLabel{
+					Name:   aws.ToString(keyMetadata.SSHPublicKeyId),
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatJson,
+				},
+			}
+			if err = property.FormatContentValue(output.SSHPublicKey); err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate user SSHPublicKey: %w", err)
+			}
+
+			properties = append(properties, property)
+		}
+	}
+
+	return []shared.MinerProperty{}, nil
+}
+
+type userServiceSpecificCredentialMiner struct {
+	client        *iam.Client
+	configuration *iam.ListServiceSpecificCredentialsOutput
+}
+
+func (ussc *userServiceSpecificCredentialMiner) fetchConf(input any) error {
+	listServiceSpecificCredentialsInput, ok := input.(*iam.ListServiceSpecificCredentialsInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListServiceSpecificCredentialsInput type assertion failed")
+	}
+
+	var err error
+	ussc.configuration, err = ussc.client.ListServiceSpecificCredentials(
+		context.Background(),
+		listServiceSpecificCredentialsInput,
+	)
+	if err != nil {
+		return fmt.Errorf("fetchConf userServiceSpecificCredential: %w", err)
+	}
+
+	return nil
+}
+
+func (ussc *userServiceSpecificCredentialMiner) generate(
+	username string,
+) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := ussc.fetchConf(&iam.ListServiceSpecificCredentialsInput{UserName: aws.String(username)}); err != nil {
+		return properties, fmt.Errorf("generate userServiceSpecificCredential: %w", err)
+	}
+
+	for _, credential := range ussc.configuration.ServiceSpecificCredentials {
+		property := shared.MinerProperty{
+			Type: userServiceSpecificCredential,
+			Label: shared.MinerPropertyLabel{
+				Name:   aws.ToString(credential.ServiceSpecificCredentialId),
+				Unique: true,
+			},
+			Content: shared.MinerPropertyContent{
+				Format: shared.FormatJson,
+			},
+		}
+		if err := property.FormatContentValue(credential); err != nil {
+			return properties, fmt.Errorf("generate user service specific credential: %w", err)
+		}
+		properties = append(properties, property)
+	}
+
+	return properties, nil
 }

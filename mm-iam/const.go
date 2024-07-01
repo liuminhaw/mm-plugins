@@ -4,10 +4,12 @@ import "fmt"
 
 const (
 	// users
-	userDetail       = "UserDetail"
-	userLoginProfile = "UserLoginProfile"
-	userAccessKey    = "UserAccessKey"
-	userMFADevice    = "UserMFADevice"
+	userDetail                    = "UserDetail"
+	userLoginProfile              = "UserLoginProfile"
+	userAccessKey                 = "UserAccessKey"
+	userMFADevice                 = "UserMFADevice"
+	userSSHPublicKey              = "UserSSHPublicKey"
+	userServiceSpecificCredential = "UserServiceSpecificCredential"
 
 	accountAlias       = "AccountAlias"
 	accessKey          = "AccessKey"
@@ -35,6 +37,8 @@ var miningUserProps = []string{
 	userLoginProfile,
 	userAccessKey,
 	userMFADevice,
+	userSSHPublicKey,
+	userServiceSpecificCredential,
 }
 
 type mmIAMError struct {
