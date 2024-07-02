@@ -10,6 +10,7 @@ const (
 	userMFADevice                 = "UserMFADevice"
 	userSSHPublicKey              = "UserSSHPublicKey"
 	userServiceSpecificCredential = "UserServiceSpecificCredential"
+	userSigningCertificate        = "UserSigningCertificate"
 
 	accountAlias       = "AccountAlias"
 	accessKey          = "AccessKey"
@@ -39,6 +40,7 @@ var miningUserProps = []string{
 	userMFADevice,
 	userSSHPublicKey,
 	userServiceSpecificCredential,
+	userSigningCertificate,
 }
 
 type mmIAMError struct {

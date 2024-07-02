@@ -68,6 +68,11 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 			client: client,
 		}
 	},
+	userSigningCertificate: func(client *iam.Client) propsCrawler {
+		return &userSigningCertificateMiner{
+			client: client,
+		}
+	},
 }
 
 func newPropsCrawler(client *iam.Client, propType string) (propsCrawler, error) {

@@ -337,7 +337,7 @@ func (uspk *userSSHPublicKeyMiner) generate(username string) ([]shared.MinerProp
 		}
 	}
 
-	return []shared.MinerProperty{}, nil
+	return properties, nil
 }
 
 type userServiceSpecificCredentialMiner struct {
@@ -387,6 +387,62 @@ func (ussc *userServiceSpecificCredentialMiner) generate(
 			return properties, fmt.Errorf("generate user service specific credential: %w", err)
 		}
 		properties = append(properties, property)
+	}
+
+	return properties, nil
+}
+
+type userSigningCertificateMiner struct {
+	client    *iam.Client
+	paginator *iam.ListSigningCertificatesPaginator
+}
+
+func (usc *userSigningCertificateMiner) fetchConf(input any) error {
+	listSigningCertificatesInput, ok := input.(*iam.ListSigningCertificatesInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListSigningCertificatesInput type assertion failed")
+	}
+
+	usc.paginator = iam.NewListSigningCertificatesPaginator(
+		usc.client,
+		listSigningCertificatesInput,
+	)
+	return nil
+}
+
+func (usc *userSigningCertificateMiner) generate(username string) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := usc.fetchConf(&iam.ListSigningCertificatesInput{UserName: aws.String(username)}); err != nil {
+		return []shared.MinerProperty{}, fmt.Errorf("generate userSigningCertificate: %w", err)
+	}
+
+	for usc.paginator.HasMorePages() {
+		page, err := usc.paginator.NextPage(context.Background())
+		if err != nil {
+			return []shared.MinerProperty{}, fmt.Errorf("generate user SigningCertificate: %w", err)
+		}
+
+		for _, certificate := range page.Certificates {
+			property := shared.MinerProperty{
+				Type: userSigningCertificate,
+				Label: shared.MinerPropertyLabel{
+					Name:   aws.ToString(certificate.CertificateId),
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatJson,
+				},
+			}
+			if err := property.FormatContentValue(certificate); err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf(
+					"generate user SigningCertificate: %w",
+					err,
+				)
+			}
+
+			properties = append(properties, property)
+		}
 	}
 
 	return properties, nil
