@@ -12,19 +12,19 @@ const (
 	userServiceSpecificCredential = "UserServiceSpecificCredential"
 	userSigningCertificate        = "UserSigningCertificate"
 
-	accountAlias       = "AccountAlias"
-	accessKey          = "AccessKey"
-	iamGroup           = "Groups"
-	iamInstanceProfile = "InstanceProfiles"
-	iamUser            = "Users"
-	mfaDevice          = "MFADevices"
+	// groups
+	groupDetail = "GroupDetail"
+	groupUser   = "GroupUser"
+
+	iamGroup = "Groups"
+	iamUser  = "Users"
 
 	noConfig = "NoConfiguration"
 )
 
 var miningResources = []string{
 	iamUser,
-	// iamGroup,
+	iamGroup,
 	// iamInstanceProfile,
 	// accountAlias,
 	// acessKey will use username cache, should be placed after iamUser
@@ -41,6 +41,10 @@ var miningUserProps = []string{
 	userSSHPublicKey,
 	userServiceSpecificCredential,
 	userSigningCertificate,
+}
+
+var miningGroupProps = []string{
+	groupDetail,
 }
 
 type mmIAMError struct {

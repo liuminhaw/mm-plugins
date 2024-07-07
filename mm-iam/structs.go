@@ -8,19 +8,34 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
-type userCache struct {
+type dataCache struct {
 	name string
 	id   string
 }
+type userCache dataCache
+type groupCache dataCache
 
 type caching struct {
-	users []userCache
+	users  []userCache
+	groups []groupCache
 }
 
 func newCaching() *caching {
 	return &caching{
-		users: []userCache{},
+		users:  []userCache{},
+		groups: []groupCache{},
 	}
+}
+
+func (c *caching) read(client *iam.Client) error {
+	if err := c.readUsers(client); err != nil {
+		return fmt.Errorf("caching read: %w", err)
+	}
+	if err := c.readGroups(client); err != nil {
+		return fmt.Errorf("caching read: %w", err)
+	}
+
+	return nil
 }
 
 func (c *caching) readUsers(client *iam.Client) error {
@@ -38,6 +53,26 @@ func (c *caching) readUsers(client *iam.Client) error {
 				id:   aws.ToString(user.UserId),
 			})
 			// c.usernames = append(c.usernames, aws.ToString(user.UserName))
+		}
+	}
+
+	return nil
+}
+
+func (c *caching) readGroups(client *iam.Client) error {
+	paginator := iam.NewListGroupsPaginator(client, &iam.ListGroupsInput{})
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("caching readGroups: %w", err)
+		}
+
+		for _, group := range page.Groups {
+			c.groups = append(c.groups, groupCache{
+				name: aws.ToString(group.GroupName),
+				id:   aws.ToString(group.GroupId),
+			})
 		}
 	}
 

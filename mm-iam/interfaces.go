@@ -20,6 +20,11 @@ var crawlerConstructors = map[string]crawlerConstructor{
 			client: client,
 		}
 	},
+	iamGroup: func(client *iam.Client) crawler {
+		return &groupResource{
+			client: client,
+		}
+	},
 }
 
 func NewCrawler(client *iam.Client, resourceType string) (crawler, error) {
@@ -70,6 +75,11 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	},
 	userSigningCertificate: func(client *iam.Client) propsCrawler {
 		return &userSigningCertificateMiner{
+			client: client,
+		}
+	},
+	groupDetail: func(client *iam.Client) propsCrawler {
+		return &groupDetailMiner{
 			client: client,
 		}
 	},

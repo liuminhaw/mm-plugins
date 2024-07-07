@@ -36,7 +36,7 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 	client := iam.NewFromConfig(cfg)
 
 	memory := newCaching()
-	if err := memory.readUsers(client); err != nil {
+	if err := memory.read(client); err != nil {
 		return nil, fmt.Errorf("mine: %w", err)
 	}
 
@@ -65,6 +65,20 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				// } else {
 				//     resources = append(resources, resource)
 				// }
+			}
+		case iamGroup:
+			for i, group := range memory.groups {
+				log.Printf("Get group: %s", group.name)
+				resourceCrawler, err := NewCrawler(client, resourceType)
+				if err != nil {
+					return nil, fmt.Errorf("Failed to create new crawler: %w", err)
+				}
+				resource, err = resourceCrawler.generate(memory, i)
+				if err != nil {
+					log.Printf("Failed to get %s properties: %v", resourceType, err)
+				} else {
+					resources = append(resources, resource)
+				}
 			}
 		default:
 			log.Printf("resource type: %s\n", resourceType)
