@@ -16,15 +16,23 @@ const (
 	groupDetail = "GroupDetail"
 	groupUser   = "GroupUser"
 
-	iamGroup = "Groups"
-	iamUser  = "Users"
+	// policies
+
+	// crawlers
+	iamGroup  = "Groups"
+	iamUser   = "Users"
+	iamPolicy = "Policies"
 
 	noConfig = "NoConfiguration"
+
+	// equipments
+	policyEquipmentType = "policies"
 )
 
 var miningResources = []string{
 	iamUser,
 	iamGroup,
+	iamPolicy,
 	// iamInstanceProfile,
 	// accountAlias,
 	// acessKey will use username cache, should be placed after iamUser

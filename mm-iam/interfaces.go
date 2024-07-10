@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -12,27 +13,30 @@ type crawler interface {
 	generate(*caching, int) (shared.MinerResource, error)
 }
 
-type crawlerConstructor func(client *iam.Client) crawler
+type crawlerConstructor func(ctx context.Context, client *iam.Client) crawler
 
 var crawlerConstructors = map[string]crawlerConstructor{
-	iamUser: func(client *iam.Client) crawler {
+	iamUser: func(ctx context.Context, client *iam.Client) crawler {
 		return &userResource{
 			client: client,
 		}
 	},
-	iamGroup: func(client *iam.Client) crawler {
+	iamGroup: func(ctx context.Context, client *iam.Client) crawler {
 		return &groupResource{
 			client: client,
 		}
 	},
+	iamPolicy: func(ctx context.Context, client *iam.Client) crawler {
+		return newPolicyResource(ctx, client)
+	},
 }
 
-func NewCrawler(client *iam.Client, resourceType string) (crawler, error) {
+func NewCrawler(ctx context.Context, client *iam.Client, resourceType string) (crawler, error) {
 	constructor, ok := crawlerConstructors[resourceType]
 	if !ok {
 		return nil, fmt.Errorf("New crawler: unknown property type: %s", resourceType)
 	}
-	return constructor(client), nil
+	return constructor(ctx, client), nil
 }
 
 type propsCrawler interface {

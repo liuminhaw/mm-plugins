@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/go-plugin"
 	"github.com/liuminhaw/mist-miner/shared"
+	iamContext "github.com/liuminhaw/mm-plugins/mm-iam/context"
 )
 
 var PLUG_NAME = "mm-iam"
@@ -35,8 +36,13 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 
 	client := iam.NewFromConfig(cfg)
 
+	ctx := context.Background()
+	if mineConfig.Equipments != nil {
+		ctx = iamContext.WithEquipments(ctx, mineConfig.Equipments)
+	}
+
 	memory := newCaching()
-	if err := memory.read(client); err != nil {
+	if err := memory.read(ctx, client); err != nil {
 		return nil, fmt.Errorf("mine: %w", err)
 	}
 
@@ -48,7 +54,7 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 		case iamUser:
 			for i, user := range memory.users {
 				log.Printf("Get user: %s", user.name)
-				resourceCrawler, err := NewCrawler(client, resourceType)
+				resourceCrawler, err := NewCrawler(ctx, client, resourceType)
 				if err != nil {
 					return nil, fmt.Errorf("Failed to create new crawler: %w", err)
 				}
@@ -58,18 +64,11 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				} else {
 					resources = append(resources, resource)
 				}
-				// userCrawler := NewUserResource(client)
-				// resource, err := userCrawler.generate(username)
-				// if err != nil {
-				//     log.Printf("Failed to get %s user: %s", username, err)
-				// } else {
-				//     resources = append(resources, resource)
-				// }
 			}
 		case iamGroup:
 			for i, group := range memory.groups {
 				log.Printf("Get group: %s", group.name)
-				resourceCrawler, err := NewCrawler(client, resourceType)
+				resourceCrawler, err := NewCrawler(ctx, client, resourceType)
 				if err != nil {
 					return nil, fmt.Errorf("Failed to create new crawler: %w", err)
 				}
@@ -80,6 +79,8 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 					resources = append(resources, resource)
 				}
 			}
+		case iamPolicy:
+			log.Println("Get policies")
 		default:
 			log.Printf("resource type: %s\n", resourceType)
 		}
