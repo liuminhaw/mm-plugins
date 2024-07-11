@@ -2,25 +2,24 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
+	"net/url"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/liuminhaw/mist-miner/shared"
-	iamContext "github.com/liuminhaw/mm-plugins/mm-iam/context"
 )
 
 type policyResource struct {
-	client     *iam.Client
-	equipments []shared.MinerConfigEquipment
+	client *iam.Client
 }
 
-func newPolicyResource(ctx context.Context, client *iam.Client) crawler {
+func newPolicyResource(client *iam.Client) crawler {
 	resource := policyResource{
 		client: client,
 	}
-	equipments := iamContext.Equipments(ctx)
-	resource.readEquipments(equipments)
-
 	return &resource
 }
 
@@ -29,24 +28,151 @@ func (p *policyResource) fetchConf(input any) error {
 }
 
 func (p *policyResource) generate(mem *caching, idx int) (shared.MinerResource, error) {
-	for _, equipment := range p.equipments {
-		fmt.Printf("Equipment type: %s\n", equipment.Type)
-		fmt.Printf("Equipment Name: %s\n", equipment.Name)
-		for key, value := range equipment.Attributes {
-			fmt.Printf("Attribute Name: %s\n", key)
-			fmt.Printf("Attribute Value: %s\n", value)
+	resource := shared.MinerResource{
+		Identifier: fmt.Sprintf("Policy_%s", mem.policies[idx].id),
+	}
+
+	for _, prop := range miningPolicyProps {
+		log.Printf("policy property: %s\n", prop)
+
+		policyPropsCrawler, err := newPropsCrawler(p.client, prop)
+		if err != nil {
+			return resource, fmt.Errorf("generate policyResource: %w", err)
+		}
+		policyProps, err := policyPropsCrawler.generate(mem.policies[idx].arn)
+		if err != nil {
+			var configErr *mmIAMError
+			if errors.As(err, &configErr) {
+				log.Printf("No %s configuration found", prop)
+			} else {
+				return resource, fmt.Errorf("generate policyResource: %w", err)
+			}
+		} else {
+			resource.Properties = append(resource.Properties, policyProps...)
 		}
 	}
 
-	return shared.MinerResource{}, nil
+	return resource, nil
 }
 
-func (p *policyResource) readEquipments(equipments []shared.MinerConfigEquipment) {
-	p.equipments = []shared.MinerConfigEquipment{}
+// policy detail
+type policyDetailMiner struct {
+	client        *iam.Client
+	configuration *iam.GetPolicyOutput
+}
 
-	for _, equipment := range equipments {
-		if equipment.Type == policyEquipmentType {
-			p.equipments = append(p.equipments, equipment)
+func (pd *policyDetailMiner) fetchConf(input any) error {
+	policyDetailInput, ok := input.(*iam.GetPolicyInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: GetPolicyInput type assertion failed")
+	}
+
+	var err error
+	pd.configuration, err = pd.client.GetPolicy(context.Background(), policyDetailInput)
+	if err != nil {
+		return fmt.Errorf("fetchConf: %w", err)
+	}
+
+	return nil
+}
+
+func (pd *policyDetailMiner) generate(policyArn string) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := pd.fetchConf(&iam.GetPolicyInput{PolicyArn: aws.String(policyArn)}); err != nil {
+		return properties, fmt.Errorf("generate policyDetail: %w", err)
+	}
+
+	property := shared.MinerProperty{
+		Type: policyDetail,
+		Label: shared.MinerPropertyLabel{
+			Name:   "PolicyDetail",
+			Unique: true,
+		},
+		Content: shared.MinerPropertyContent{
+			Format: shared.FormatJson,
+		},
+	}
+	if err := property.FormatContentValue(pd.configuration.Policy); err != nil {
+		return properties, fmt.Errorf("generate policyDetail: %w", err)
+	}
+	properties = append(properties, property)
+
+	return properties, nil
+}
+
+// policy versions
+type policyVersionsMiner struct {
+	client        *iam.Client
+	configuration *iam.GetPolicyVersionOutput
+	paginator     *iam.ListPolicyVersionsPaginator
+}
+
+func (pv *policyVersionsMiner) fetchConf(input any) error {
+	policyVersionsInput, ok := input.(*iam.ListPolicyVersionsInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListPolicyVersionsInput type assertion failed")
+	}
+
+	pv.paginator = iam.NewListPolicyVersionsPaginator(pv.client, policyVersionsInput)
+	return nil
+}
+
+func (pv *policyVersionsMiner) generate(policyArn string) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := pv.fetchConf(&iam.ListPolicyVersionsInput{PolicyArn: aws.String(policyArn)}); err != nil {
+		return properties, fmt.Errorf("generate policyVersions: %w", err)
+	}
+
+	for pv.paginator.HasMorePages() {
+		page, err := pv.paginator.NextPage(context.Background())
+		if err != nil {
+			return []shared.MinerProperty{}, fmt.Errorf("generate policyVersions: %w", err)
+		}
+
+		for _, version := range page.Versions {
+			pv.configuration, err = pv.client.GetPolicyVersion(
+				context.Background(),
+				&iam.GetPolicyVersionInput{
+					PolicyArn: aws.String(policyArn),
+					VersionId: version.VersionId,
+				},
+			)
+			if err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate policyVersions: %w", err)
+			}
+
+			// Url decode policy document
+			decodedDocument, err := url.QueryUnescape(
+				aws.ToString(pv.configuration.PolicyVersion.Document),
+			)
+			if err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate policyVersions: %w", err)
+			}
+
+			cleanDocument, err := shared.JsonNormalize(decodedDocument)
+			if err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate policyVersions: %w", err)
+			}
+			pv.configuration.PolicyVersion.Document = aws.String(string(cleanDocument))
+
+			property := shared.MinerProperty{
+				Type: policyVersions,
+				Label: shared.MinerPropertyLabel{
+					Name:   aws.ToString(version.VersionId),
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatJson,
+				},
+			}
+			if err := property.FormatContentValue(pv.configuration.PolicyVersion); err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate policyVersions: %w", err)
+			}
+			properties = append(properties, property)
 		}
 	}
+
+	return properties, nil
 }

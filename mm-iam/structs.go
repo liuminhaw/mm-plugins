@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	iamContext "github.com/liuminhaw/mm-plugins/mm-iam/context"
 	"github.com/liuminhaw/mm-plugins/mm-iam/utils"
 )
@@ -18,7 +18,10 @@ type dataCache struct {
 type (
 	userCache   dataCache
 	groupCache  dataCache
-	policyCache dataCache
+	policyCache struct {
+		arn string
+		id  string
+	}
 )
 
 type caching struct {
@@ -99,15 +102,28 @@ func (c *caching) readPolicies(ctx context.Context, client *iam.Client) error {
 		"scope",
 	)
 
+	var input iam.ListPoliciesInput
 	switch listPoliciesScope {
 	case "Local", "AWS", "All":
-		// input = iam.ListPoliciesInput{Scope: types.PolicyScopeType(listPoliciesScope)}
-		log.Printf("listPoliciesScope: %s\n", listPoliciesScope)
+		input = iam.ListPoliciesInput{Scope: types.PolicyScopeType(listPoliciesScope)}
 	default:
-		// input = iam.ListPoliciesInput{}
-		log.Println("listPoliciesScope: default")
+		input = iam.ListPoliciesInput{Scope: types.PolicyScopeType("Local")}
+	}
+
+	paginator := iam.NewListPoliciesPaginator(client, &input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("caching readPolicies: %w", err)
+		}
+
+		for _, policy := range page.Policies {
+			c.policies = append(c.policies, policyCache{
+				arn: aws.ToString(policy.Arn),
+				id:  aws.ToString(policy.PolicyId),
+			})
+		}
 	}
 
 	return nil
-	// paginator := iam.NewListPoliciesPaginator(client, &input)
 }

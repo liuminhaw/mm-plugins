@@ -80,7 +80,19 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				}
 			}
 		case iamPolicy:
-			log.Println("Get policies")
+			for i, policy := range memory.policies {
+				log.Printf("Get policy: %s", policy.arn)
+				resourceCrawler, err := NewCrawler(ctx, client, resourceType)
+				if err != nil {
+					return nil, fmt.Errorf("Failed to create new crawler: %w", err)
+				}
+				resource, err = resourceCrawler.generate(memory, i)
+				if err != nil {
+					log.Printf("Failed to get %s properties: %v", resourceType, err)
+				} else {
+					resources = append(resources, resource)
+				}
+			}
 		default:
 			log.Printf("resource type: %s\n", resourceType)
 		}

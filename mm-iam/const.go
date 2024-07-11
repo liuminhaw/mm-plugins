@@ -17,6 +17,8 @@ const (
 	groupUser   = "GroupUser"
 
 	// policies
+	policyDetail   = "PolicyDetail"
+	policyVersions = "PolicyVersions"
 
 	// crawlers
 	iamGroup  = "Groups"
@@ -53,6 +55,11 @@ var miningUserProps = []string{
 
 var miningGroupProps = []string{
 	groupDetail,
+}
+
+var miningPolicyProps = []string{
+	policyDetail,
+	policyVersions,
 }
 
 type mmIAMError struct {

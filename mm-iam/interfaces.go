@@ -27,7 +27,7 @@ var crawlerConstructors = map[string]crawlerConstructor{
 		}
 	},
 	iamPolicy: func(ctx context.Context, client *iam.Client) crawler {
-		return newPolicyResource(ctx, client)
+		return newPolicyResource(client)
 	},
 }
 
@@ -84,6 +84,16 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	},
 	groupDetail: func(client *iam.Client) propsCrawler {
 		return &groupDetailMiner{
+			client: client,
+		}
+	},
+	policyDetail: func(client *iam.Client) propsCrawler {
+		return &policyDetailMiner{
+			client: client,
+		}
+	},
+	policyVersions: func(client *iam.Client) propsCrawler {
+		return &policyVersionsMiner{
 			client: client,
 		}
 	},
