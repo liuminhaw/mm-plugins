@@ -15,13 +15,20 @@ type groupResource struct {
 	client *iam.Client
 }
 
+func newGroupResource(client *iam.Client) crawler {
+	resource := groupResource{
+		client: client,
+	}
+	return &resource
+}
+
 func (g *groupResource) fetchConf(input any) error {
 	return nil
 }
 
-func (g *groupResource) generate(mem *caching, idx int) (shared.MinerResource, error) {
+func (g *groupResource) generate(datum cacheInfo) (shared.MinerResource, error) {
 	resource := shared.MinerResource{
-		Identifier: fmt.Sprintf("Group_%s", mem.groups[idx].id),
+		Identifier: fmt.Sprintf("Group_%s", datum.id),
 	}
 
 	for _, prop := range miningGroupProps {
@@ -31,7 +38,7 @@ func (g *groupResource) generate(mem *caching, idx int) (shared.MinerResource, e
 		if err != nil {
 			return resource, fmt.Errorf("generate groupResource: %w", err)
 		}
-		groupProps, err := groupPropsCrawler.generate(mem.groups[idx].name)
+		groupProps, err := groupPropsCrawler.generate(datum.name)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {

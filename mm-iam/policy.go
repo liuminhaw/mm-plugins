@@ -27,9 +27,9 @@ func (p *policyResource) fetchConf(input any) error {
 	return nil
 }
 
-func (p *policyResource) generate(mem *caching, idx int) (shared.MinerResource, error) {
+func (p *policyResource) generate(datum cacheInfo) (shared.MinerResource, error) {
 	resource := shared.MinerResource{
-		Identifier: fmt.Sprintf("Policy_%s", mem.policies[idx].id),
+		Identifier: fmt.Sprintf("Policy_%s", datum.id),
 	}
 
 	for _, prop := range miningPolicyProps {
@@ -39,7 +39,7 @@ func (p *policyResource) generate(mem *caching, idx int) (shared.MinerResource, 
 		if err != nil {
 			return resource, fmt.Errorf("generate policyResource: %w", err)
 		}
-		policyProps, err := policyPropsCrawler.generate(mem.policies[idx].arn)
+		policyProps, err := policyPropsCrawler.generate(datum.name)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {

@@ -11,30 +11,27 @@ import (
 	"github.com/liuminhaw/mm-plugins/mm-iam/utils"
 )
 
-type dataCache struct {
+type cacheInfo struct {
 	name string
 	id   string
 }
-type (
-	userCache   dataCache
-	groupCache  dataCache
-	policyCache struct {
-		arn string
-		id  string
-	}
-)
+
+type dataCache struct {
+	resource string
+	caches   []cacheInfo
+}
 
 type caching struct {
-	users    []userCache
-	groups   []groupCache
-	policies []policyCache
+	users    dataCache
+	groups   dataCache
+	policies dataCache
 }
 
 func newCaching() *caching {
 	return &caching{
-		users:    []userCache{},
-		groups:   []groupCache{},
-		policies: []policyCache{},
+		users:    dataCache{resource: "user", caches: []cacheInfo{}},
+		groups:   dataCache{resource: "group", caches: []cacheInfo{}},
+		policies: dataCache{resource: "policy", caches: []cacheInfo{}},
 	}
 }
 
@@ -62,7 +59,7 @@ func (c *caching) readUsers(client *iam.Client) error {
 		}
 
 		for _, user := range page.Users {
-			c.users = append(c.users, userCache{
+			c.users.caches = append(c.users.caches, cacheInfo{
 				name: aws.ToString(user.UserName),
 				id:   aws.ToString(user.UserId),
 			})
@@ -83,7 +80,7 @@ func (c *caching) readGroups(client *iam.Client) error {
 		}
 
 		for _, group := range page.Groups {
-			c.groups = append(c.groups, groupCache{
+			c.groups.caches = append(c.groups.caches, cacheInfo{
 				name: aws.ToString(group.GroupName),
 				id:   aws.ToString(group.GroupId),
 			})
@@ -118,9 +115,9 @@ func (c *caching) readPolicies(ctx context.Context, client *iam.Client) error {
 		}
 
 		for _, policy := range page.Policies {
-			c.policies = append(c.policies, policyCache{
-				arn: aws.ToString(policy.Arn),
-				id:  aws.ToString(policy.PolicyId),
+			c.policies.caches = append(c.policies.caches, cacheInfo{
+				name: aws.ToString(policy.Arn),
+				id:   aws.ToString(policy.PolicyId),
 			})
 		}
 	}

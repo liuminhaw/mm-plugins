@@ -10,21 +10,17 @@ import (
 
 type crawler interface {
 	fetchConf(any) error
-	generate(*caching, int) (shared.MinerResource, error)
+	generate(cacheInfo) (shared.MinerResource, error)
 }
 
 type crawlerConstructor func(ctx context.Context, client *iam.Client) crawler
 
 var crawlerConstructors = map[string]crawlerConstructor{
 	iamUser: func(ctx context.Context, client *iam.Client) crawler {
-		return &userResource{
-			client: client,
-		}
+		return newUserResource(client)
 	},
 	iamGroup: func(ctx context.Context, client *iam.Client) crawler {
-		return &groupResource{
-			client: client,
-		}
+		return newGroupResource(client)
 	},
 	iamPolicy: func(ctx context.Context, client *iam.Client) crawler {
 		return newPolicyResource(client)

@@ -24,13 +24,20 @@ type userResource struct {
 	client *iam.Client
 }
 
+func newUserResource(client *iam.Client) crawler {
+	resource := userResource{
+		client: client,
+	}
+	return &resource
+}
+
 func (u *userResource) fetchConf(input any) error {
 	return nil
 }
 
-func (u *userResource) generate(mem *caching, idx int) (shared.MinerResource, error) {
+func (u *userResource) generate(datum cacheInfo) (shared.MinerResource, error) {
 	resource := shared.MinerResource{
-		Identifier: fmt.Sprintf("User_%s", mem.users[idx].id),
+		Identifier: fmt.Sprintf("User_%s", datum.id),
 	}
 
 	for _, prop := range miningUserProps {
@@ -40,7 +47,7 @@ func (u *userResource) generate(mem *caching, idx int) (shared.MinerResource, er
 		if err != nil {
 			return resource, fmt.Errorf("generate userResource: %w", err)
 		}
-		userProps, err := userPropsCrawler.generate(mem.users[idx].name)
+		userProps, err := userPropsCrawler.generate(datum.name)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {
