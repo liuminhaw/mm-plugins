@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/url"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/liuminhaw/mist-miner/shared"
+	"github.com/liuminhaw/mm-plugins/utils"
 )
 
 type policyResource struct {
@@ -144,18 +144,13 @@ func (pv *policyVersionsMiner) generate(policyArn string) ([]shared.MinerPropert
 			}
 
 			// Url decode policy document
-			decodedDocument, err := url.QueryUnescape(
+			decodedDocument, err := utils.DocumentUrlDecode(
 				aws.ToString(pv.configuration.PolicyVersion.Document),
 			)
 			if err != nil {
 				return []shared.MinerProperty{}, fmt.Errorf("generate policyVersions: %w", err)
 			}
-
-			cleanDocument, err := shared.JsonNormalize(decodedDocument)
-			if err != nil {
-				return []shared.MinerProperty{}, fmt.Errorf("generate policyVersions: %w", err)
-			}
-			pv.configuration.PolicyVersion.Document = aws.String(string(cleanDocument))
+			pv.configuration.PolicyVersion.Document = aws.String(decodedDocument)
 
 			property := shared.MinerProperty{
 				Type: policyVersions,

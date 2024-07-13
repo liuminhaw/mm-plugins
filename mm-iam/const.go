@@ -20,10 +20,16 @@ const (
 	policyDetail   = "PolicyDetail"
 	policyVersions = "PolicyVersions"
 
+	// roles
+	roleDetail        = "RoleDetail"
+	roleInlinePolicy  = "RoleInlinePolicy"
+	roleManagedPolicy = "RoleManagedPolicy"
+
 	// crawlers
 	iamGroup  = "Groups"
 	iamUser   = "Users"
 	iamPolicy = "Policies"
+	iamRole   = "Roles"
 
 	noConfig = "NoConfiguration"
 
@@ -35,6 +41,7 @@ var miningResources = []string{
 	iamUser,
 	iamGroup,
 	iamPolicy,
+	iamRole,
 	// iamInstanceProfile,
 	// accountAlias,
 	// acessKey will use username cache, should be placed after iamUser
@@ -60,6 +67,12 @@ var miningGroupProps = []string{
 var miningPolicyProps = []string{
 	policyDetail,
 	policyVersions,
+}
+
+var miningRoleProps = []string{
+	roleDetail,
+	roleInlinePolicy,
+	roleManagedPolicy,
 }
 
 type mmIAMError struct {

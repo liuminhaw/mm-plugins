@@ -25,13 +25,15 @@ type caching struct {
 	users    dataCache
 	groups   dataCache
 	policies dataCache
+	roles    dataCache
 }
 
 func newCaching() *caching {
 	return &caching{
-		users:    dataCache{resource: "user", caches: []cacheInfo{}},
-		groups:   dataCache{resource: "group", caches: []cacheInfo{}},
-		policies: dataCache{resource: "policy", caches: []cacheInfo{}},
+		users:    dataCache{resource: iamUser, caches: []cacheInfo{}},
+		groups:   dataCache{resource: iamGroup, caches: []cacheInfo{}},
+		policies: dataCache{resource: iamPolicy, caches: []cacheInfo{}},
+		roles:    dataCache{resource: iamRole, caches: []cacheInfo{}},
 	}
 }
 
@@ -43,6 +45,9 @@ func (c *caching) read(ctx context.Context, client *iam.Client) error {
 		return fmt.Errorf("caching read: %w", err)
 	}
 	if err := c.readPolicies(ctx, client); err != nil {
+		return fmt.Errorf("caching read: %w", err)
+	}
+	if err := c.readRoles(client); err != nil {
 		return fmt.Errorf("caching read: %w", err)
 	}
 
@@ -63,7 +68,6 @@ func (c *caching) readUsers(client *iam.Client) error {
 				name: aws.ToString(user.UserName),
 				id:   aws.ToString(user.UserId),
 			})
-			// c.usernames = append(c.usernames, aws.ToString(user.UserName))
 		}
 	}
 
@@ -118,6 +122,26 @@ func (c *caching) readPolicies(ctx context.Context, client *iam.Client) error {
 			c.policies.caches = append(c.policies.caches, cacheInfo{
 				name: aws.ToString(policy.Arn),
 				id:   aws.ToString(policy.PolicyId),
+			})
+		}
+	}
+
+	return nil
+}
+
+func (c *caching) readRoles(client *iam.Client) error {
+	paginator := iam.NewListRolesPaginator(client, &iam.ListRolesInput{})
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("caching readRoles: %w", err)
+		}
+
+		for _, role := range page.Roles {
+			c.roles.caches = append(c.roles.caches, cacheInfo{
+				name: aws.ToString(role.RoleName),
+				id:   aws.ToString(role.RoleId),
 			})
 		}
 	}

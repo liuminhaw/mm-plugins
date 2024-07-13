@@ -68,6 +68,12 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				return nil, fmt.Errorf("mine: %w", err)
 			}
 			resources = append(resources, minedResources...)
+		case iamRole:
+			minedResources, err := mineResources(ctx, client, resourceType, memory.roles)
+			if err != nil {
+				return nil, fmt.Errorf("mine: %w", err)
+			}
+			resources = append(resources, minedResources...)
 		default:
 			log.Printf("resource type: %s\n", resourceType)
 		}

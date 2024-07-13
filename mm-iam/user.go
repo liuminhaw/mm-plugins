@@ -14,12 +14,6 @@ import (
 	"github.com/liuminhaw/mist-miner/shared"
 )
 
-var miningUserResoures = []string{
-	userDetail,
-	userLoginProfile,
-	userAccessKey,
-}
-
 type userResource struct {
 	client *iam.Client
 }
