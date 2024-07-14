@@ -7,8 +7,9 @@ const (
 	userDetail                    = "UserDetail"
 	userLoginProfile              = "UserLoginProfile"
 	userAccessKey                 = "UserAccessKey"
-	userMFADevice                 = "UserMFADevice"
+	userGroups                    = "UserGroups"
 	userInlinePolicy              = "UserInlinePolicy"
+	userMFADevice                 = "UserMFADevice"
 	userManagedPolicy             = "UserManagedPolicy"
 	userSSHPublicKey              = "UserSSHPublicKey"
 	userServiceSpecificCredential = "UserServiceSpecificCredential"
@@ -58,6 +59,7 @@ var miningUserProps = []string{
 	userDetail,
 	userLoginProfile,
 	userAccessKey,
+	userGroups,
 	userInlinePolicy,
 	userManagedPolicy,
 	userMFADevice,

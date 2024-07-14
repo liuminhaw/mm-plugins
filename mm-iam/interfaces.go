@@ -81,6 +81,9 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 			client: client,
 		}
 	},
+	userGroups: func(client *iam.Client) propsCrawler {
+		return newUserGroupsMiner(client)
+	},
 	userInlinePolicy: func(client *iam.Client) propsCrawler {
 		return newUserInlinePolicyMiner(client)
 	},

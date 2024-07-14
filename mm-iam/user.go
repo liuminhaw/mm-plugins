@@ -58,7 +58,7 @@ func (u *userResource) generate(datum cacheInfo) (shared.MinerResource, error) {
 	return resource, nil
 }
 
-// user detail
+// user detail (GetUser)
 type userDetailMiner struct {
 	client        *iam.Client
 	configuration *iam.GetUserOutput
@@ -104,7 +104,7 @@ func (ud *userDetailMiner) generate(username string) ([]shared.MinerProperty, er
 	return properties, nil
 }
 
-// user login profile
+// user login profile (GetLoginProfile)
 type userLoginProfileMiner struct {
 	client        *iam.Client
 	configuration *iam.GetLoginProfileOutput
@@ -159,6 +159,7 @@ func (ulp *userLoginProfileMiner) generate(username string) ([]shared.MinerPrope
 	return properties, nil
 }
 
+// user accesskey (NewListAccessKeysPaginator)
 type userAccessKeyMiner struct {
 	client    *iam.Client
 	paginator *iam.ListAccessKeysPaginator
@@ -208,6 +209,7 @@ func (uak *userAccessKeyMiner) generate(username string) ([]shared.MinerProperty
 	return properties, nil
 }
 
+// user MFA device (NewListMFADevicesPaginator)
 type userMFADeviceMiner struct {
 	client    *iam.Client
 	paginator *iam.ListMFADevicesPaginator
@@ -280,6 +282,7 @@ func (umd *userMFADeviceMiner) generate(username string) ([]shared.MinerProperty
 	return properties, nil
 }
 
+// user SSH public key (NewListSSHPublicKeysPaginator)
 type userSSHPublicKeyMiner struct {
 	client    *iam.Client
 	paginator *iam.ListSSHPublicKeysPaginator
@@ -342,6 +345,7 @@ func (uspk *userSSHPublicKeyMiner) generate(username string) ([]shared.MinerProp
 	return properties, nil
 }
 
+// user Service Specific Credential (ListServiceSpecificCredentials)
 type userServiceSpecificCredentialMiner struct {
 	client        *iam.Client
 	configuration *iam.ListServiceSpecificCredentialsOutput
@@ -394,6 +398,7 @@ func (ussc *userServiceSpecificCredentialMiner) generate(
 	return properties, nil
 }
 
+// user signing certificate (NewListSigningCertificatesPaginator)
 type userSigningCertificateMiner struct {
 	client    *iam.Client
 	paginator *iam.ListSigningCertificatesPaginator
@@ -577,6 +582,62 @@ func (ump *userManagedPolicyMiner) generate(userName string) ([]shared.MinerProp
 			}
 			if err := property.FormatContentValue(policy); err != nil {
 				return []shared.MinerProperty{}, fmt.Errorf("generate user ManagedPolicy: %w", err)
+			}
+			properties = append(properties, property)
+		}
+	}
+
+	return properties, nil
+}
+
+// user belongs groups
+type userGroupsMiner struct {
+	client    *iam.Client
+	paginator *iam.ListGroupsForUserPaginator
+}
+
+func newUserGroupsMiner(client *iam.Client) *userGroupsMiner {
+	return &userGroupsMiner{
+		client: client,
+	}
+}
+
+func (ug *userGroupsMiner) fetchConf(input any) error {
+	userGroupsInput, ok := input.(*iam.ListGroupsForUserInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListGroupsForUserInput type assertion failed")
+	}
+
+	ug.paginator = iam.NewListGroupsForUserPaginator(ug.client, userGroupsInput)
+	return nil
+}
+
+func (ug *userGroupsMiner) generate(userName string) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := ug.fetchConf(&iam.ListGroupsForUserInput{UserName: aws.String(userName)}); err != nil {
+		return []shared.MinerProperty{}, fmt.Errorf("generate userGroups: %w", err)
+	}
+
+	for ug.paginator.HasMorePages() {
+		page, err := ug.paginator.NextPage(context.Background())
+		if err != nil {
+			return []shared.MinerProperty{}, fmt.Errorf("generate user Groups: %w", err)
+		}
+
+		for _, group := range page.Groups {
+			property := shared.MinerProperty{
+				Type: userGroups,
+				Label: shared.MinerPropertyLabel{
+					Name:   aws.ToString(group.GroupId),
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatJson,
+				},
+			}
+			if err := property.FormatContentValue(group); err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate user Groups: %w", err)
 			}
 			properties = append(properties, property)
 		}
