@@ -214,7 +214,7 @@ func (rmp *roleManagedPolicyMiner) generate(roleName string) ([]shared.MinerProp
 			property := shared.MinerProperty{
 				Type: roleManagedPolicy,
 				Label: shared.MinerPropertyLabel{
-					Name:   aws.ToString(policy.PolicyArn),
+					Name:   aws.ToString(policy.PolicyName),
 					Unique: true,
 				},
 				Content: shared.MinerPropertyContent{

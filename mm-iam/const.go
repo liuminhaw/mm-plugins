@@ -8,13 +8,17 @@ const (
 	userLoginProfile              = "UserLoginProfile"
 	userAccessKey                 = "UserAccessKey"
 	userMFADevice                 = "UserMFADevice"
+	userInlinePolicy              = "UserInlinePolicy"
+	userManagedPolicy             = "UserManagedPolicy"
 	userSSHPublicKey              = "UserSSHPublicKey"
 	userServiceSpecificCredential = "UserServiceSpecificCredential"
 	userSigningCertificate        = "UserSigningCertificate"
 
 	// groups
-	groupDetail = "GroupDetail"
-	groupUser   = "GroupUser"
+	groupDetail        = "GroupDetail"
+	groupUser          = "GroupUser"
+	groupInlinePolicy  = "GroupInlinePolicy"
+	groupManagedPolicy = "GroupManagedPolicy"
 
 	// policies
 	policyDetail   = "PolicyDetail"
@@ -54,6 +58,8 @@ var miningUserProps = []string{
 	userDetail,
 	userLoginProfile,
 	userAccessKey,
+	userInlinePolicy,
+	userManagedPolicy,
 	userMFADevice,
 	userSSHPublicKey,
 	userServiceSpecificCredential,
@@ -62,6 +68,8 @@ var miningUserProps = []string{
 
 var miningGroupProps = []string{
 	groupDetail,
+	groupInlinePolicy,
+	groupManagedPolicy,
 }
 
 var miningPolicyProps = []string{

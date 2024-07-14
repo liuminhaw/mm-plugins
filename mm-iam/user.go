@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/smithy-go"
 	"github.com/liuminhaw/mist-miner/shared"
+	"github.com/liuminhaw/mm-plugins/utils"
 )
 
 type userResource struct {
@@ -442,6 +443,141 @@ func (usc *userSigningCertificateMiner) generate(username string) ([]shared.Mine
 				)
 			}
 
+			properties = append(properties, property)
+		}
+	}
+
+	return properties, nil
+}
+
+// user inline policy
+// Including information about the user's inline policies
+type userInlinePolicyMiner struct {
+	client        *iam.Client
+	paginator     *iam.ListUserPoliciesPaginator
+	configuration *iam.GetUserPolicyOutput
+}
+
+func newUserInlinePolicyMiner(client *iam.Client) *userInlinePolicyMiner {
+	return &userInlinePolicyMiner{
+		client: client,
+	}
+}
+
+func (uip *userInlinePolicyMiner) fetchConf(input any) error {
+	userInlinePolicyInput, ok := input.(*iam.ListUserPoliciesInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListUserPoliciesInput type assertion failed")
+	}
+
+	uip.paginator = iam.NewListUserPoliciesPaginator(uip.client, userInlinePolicyInput)
+	return nil
+}
+
+func (uip *userInlinePolicyMiner) generate(userName string) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := uip.fetchConf(&iam.ListUserPoliciesInput{UserName: aws.String(userName)}); err != nil {
+		return []shared.MinerProperty{}, fmt.Errorf("generate userInlinePolicy: %w", err)
+	}
+
+	for uip.paginator.HasMorePages() {
+		page, err := uip.paginator.NextPage(context.Background())
+		if err != nil {
+			return []shared.MinerProperty{}, fmt.Errorf("generate user InlinePolicy: %w", err)
+		}
+
+		for _, policyName := range page.PolicyNames {
+			uip.configuration, err = uip.client.GetUserPolicy(
+				context.Background(),
+				&iam.GetUserPolicyInput{
+					PolicyName: aws.String(policyName),
+					UserName:   aws.String(userName),
+				},
+			)
+			if err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate user InlinePolicy: %w", err)
+			}
+
+			// Url decode on policy document
+			decodedDocument, err := utils.DocumentUrlDecode(
+				aws.ToString(uip.configuration.PolicyDocument),
+			)
+			if err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate user InlinePolicy: %w", err)
+			}
+			uip.configuration.PolicyDocument = aws.String(decodedDocument)
+
+			property := shared.MinerProperty{
+				Type: userInlinePolicy,
+				Label: shared.MinerPropertyLabel{
+					Name:   policyName,
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatJson,
+				},
+			}
+			if err := property.FormatContentValue(uip.configuration); err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate user InlinePolicy: %w", err)
+			}
+			properties = append(properties, property)
+		}
+	}
+
+	return properties, nil
+}
+
+// user managed policy
+// Including information about the user's managed policies
+type userManagedPolicyMiner struct {
+	client    *iam.Client
+	paginator *iam.ListAttachedUserPoliciesPaginator
+}
+
+func newUserManagedPolicyMiner(client *iam.Client) *userManagedPolicyMiner {
+	return &userManagedPolicyMiner{
+		client: client,
+	}
+}
+
+func (ump *userManagedPolicyMiner) fetchConf(input any) error {
+	userManagedPolicyInput, ok := input.(*iam.ListAttachedUserPoliciesInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListAttachedUserPoliciesInput type assertion failed")
+	}
+
+	ump.paginator = iam.NewListAttachedUserPoliciesPaginator(ump.client, userManagedPolicyInput)
+	return nil
+}
+
+func (ump *userManagedPolicyMiner) generate(userName string) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := ump.fetchConf(&iam.ListAttachedUserPoliciesInput{UserName: aws.String(userName)}); err != nil {
+		return []shared.MinerProperty{}, fmt.Errorf("generate userManagedPolicy: %w", err)
+	}
+
+	for ump.paginator.HasMorePages() {
+		page, err := ump.paginator.NextPage(context.Background())
+		if err != nil {
+			return []shared.MinerProperty{}, fmt.Errorf("generate user ManagedPolicy: %w", err)
+		}
+
+		for _, policy := range page.AttachedPolicies {
+			property := shared.MinerProperty{
+				Type: userManagedPolicy,
+				Label: shared.MinerPropertyLabel{
+					Name:   aws.ToString(policy.PolicyName),
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatJson,
+				},
+			}
+			if err := property.FormatContentValue(policy); err != nil {
+				return []shared.MinerProperty{}, fmt.Errorf("generate user ManagedPolicy: %w", err)
+			}
 			properties = append(properties, property)
 		}
 	}

@@ -81,10 +81,22 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 			client: client,
 		}
 	},
+	userInlinePolicy: func(client *iam.Client) propsCrawler {
+		return newUserInlinePolicyMiner(client)
+	},
+	userManagedPolicy: func(client *iam.Client) propsCrawler {
+		return newUserManagedPolicyMiner(client)
+	},
 	groupDetail: func(client *iam.Client) propsCrawler {
 		return &groupDetailMiner{
 			client: client,
 		}
+	},
+	groupInlinePolicy: func(client *iam.Client) propsCrawler {
+		return newGroupInlinePolicyMiner(client)
+	},
+	groupManagedPolicy: func(client *iam.Client) propsCrawler {
+		return newGroupManagedPolicyMiner(client)
 	},
 	policyDetail: func(client *iam.Client) propsCrawler {
 		return &policyDetailMiner{
