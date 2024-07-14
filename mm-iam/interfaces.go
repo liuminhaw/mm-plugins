@@ -47,39 +47,25 @@ type propsCrawlerConstructor func(client *iam.Client) propsCrawler
 
 var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	userDetail: func(client *iam.Client) propsCrawler {
-		return &userDetailMiner{
-			client: client,
-		}
+		return newUserDetailMiner(client)
 	},
 	userLoginProfile: func(client *iam.Client) propsCrawler {
-		return &userLoginProfileMiner{
-			client: client,
-		}
+		return newUserLoginProfileMiner(client)
 	},
 	userAccessKey: func(client *iam.Client) propsCrawler {
-		return &userAccessKeyMiner{
-			client: client,
-		}
+		return newUserAccessKeyMiner(client)
 	},
 	userMFADevice: func(client *iam.Client) propsCrawler {
-		return &userMFADeviceMiner{
-			client: client,
-		}
+		return newUserMFADeviceMiner(client)
 	},
 	userSSHPublicKey: func(client *iam.Client) propsCrawler {
-		return &userSSHPublicKeyMiner{
-			client: client,
-		}
+		return newUserSSHPublicKeyMiner(client)
 	},
 	userServiceSpecificCredential: func(client *iam.Client) propsCrawler {
-		return &userServiceSpecificCredentialMiner{
-			client: client,
-		}
+		return newUserServiceSpecificCredentialMiner(client)
 	},
 	userSigningCertificate: func(client *iam.Client) propsCrawler {
-		return &userSigningCertificateMiner{
-			client: client,
-		}
+		return newUserSigningCertificateMiner(client)
 	},
 	userGroups: func(client *iam.Client) propsCrawler {
 		return newUserGroupsMiner(client)
@@ -91,9 +77,7 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 		return newUserManagedPolicyMiner(client)
 	},
 	groupDetail: func(client *iam.Client) propsCrawler {
-		return &groupDetailMiner{
-			client: client,
-		}
+		return newGroupDetailMiner(client)
 	},
 	groupInlinePolicy: func(client *iam.Client) propsCrawler {
 		return newGroupInlinePolicyMiner(client)
@@ -102,29 +86,19 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 		return newGroupManagedPolicyMiner(client)
 	},
 	policyDetail: func(client *iam.Client) propsCrawler {
-		return &policyDetailMiner{
-			client: client,
-		}
+		return newPolicyDetailMiner(client)
 	},
 	policyVersions: func(client *iam.Client) propsCrawler {
-		return &policyVersionsMiner{
-			client: client,
-		}
+		return newPolicyVersionsMiner(client)
 	},
 	roleDetail: func(client *iam.Client) propsCrawler {
-		return &roleDetailMiner{
-			client: client,
-		}
+		return newRoleDetailMiner(client)
 	},
 	roleInlinePolicy: func(client *iam.Client) propsCrawler {
-		return &roleInlinePolicyMiner{
-			client: client,
-		}
+		return newRoleInlinePolicyMiner(client)
 	},
 	roleManagedPolicy: func(client *iam.Client) propsCrawler {
-		return &roleManagedPolicyMiner{
-			client: client,
-		}
+		return newRoleManagedPolicyMiner(client)
 	},
 }
 

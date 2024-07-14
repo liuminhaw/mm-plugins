@@ -61,6 +61,12 @@ type policyDetailMiner struct {
 	configuration *iam.GetPolicyOutput
 }
 
+func newPolicyDetailMiner(client *iam.Client) propsCrawler {
+	return &policyDetailMiner{
+		client: client,
+	}
+}
+
 func (pd *policyDetailMiner) fetchConf(input any) error {
 	policyDetailInput, ok := input.(*iam.GetPolicyInput)
 	if !ok {
@@ -106,6 +112,12 @@ type policyVersionsMiner struct {
 	client        *iam.Client
 	configuration *iam.GetPolicyVersionOutput
 	paginator     *iam.ListPolicyVersionsPaginator
+}
+
+func newPolicyVersionsMiner(client *iam.Client) propsCrawler {
+	return &policyVersionsMiner{
+		client: client,
+	}
 }
 
 func (pv *policyVersionsMiner) fetchConf(input any) error {

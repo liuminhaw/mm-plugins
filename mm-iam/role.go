@@ -61,6 +61,12 @@ type roleDetailMiner struct {
 	configuration *iam.GetRoleOutput
 }
 
+func newRoleDetailMiner(client *iam.Client) propsCrawler {
+	return &roleDetailMiner{
+		client: client,
+	}
+}
+
 func (rd *roleDetailMiner) fetchConf(input any) error {
 	roleDetailInput, ok := input.(*iam.GetRoleInput)
 	if !ok {
@@ -115,6 +121,12 @@ type roleInlinePolicyMiner struct {
 	client        *iam.Client
 	paginator     *iam.ListRolePoliciesPaginator
 	configuration *iam.GetRolePolicyOutput
+}
+
+func newRoleInlinePolicyMiner(client *iam.Client) propsCrawler {
+	return &roleInlinePolicyMiner{
+		client: client,
+	}
 }
 
 func (rip *roleInlinePolicyMiner) fetchConf(input any) error {
@@ -185,6 +197,12 @@ func (rip *roleInlinePolicyMiner) generate(roleName string) ([]shared.MinerPrope
 type roleManagedPolicyMiner struct {
 	client    *iam.Client
 	paginator *iam.ListAttachedRolePoliciesPaginator
+}
+
+func newRoleManagedPolicyMiner(client *iam.Client) propsCrawler {
+	return &roleManagedPolicyMiner{
+		client: client,
+	}
 }
 
 func (rmp *roleManagedPolicyMiner) fetchConf(input any) error {

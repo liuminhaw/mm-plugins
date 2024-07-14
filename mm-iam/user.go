@@ -64,6 +64,12 @@ type userDetailMiner struct {
 	configuration *iam.GetUserOutput
 }
 
+func newUserDetailMiner(client *iam.Client) *userDetailMiner {
+	return &userDetailMiner{
+		client: client,
+	}
+}
+
 func (ud *userDetailMiner) fetchConf(input any) error {
 	userDetailInput, ok := input.(*iam.GetUserInput)
 	if !ok {
@@ -108,6 +114,12 @@ func (ud *userDetailMiner) generate(username string) ([]shared.MinerProperty, er
 type userLoginProfileMiner struct {
 	client        *iam.Client
 	configuration *iam.GetLoginProfileOutput
+}
+
+func newUserLoginProfileMiner(client *iam.Client) *userLoginProfileMiner {
+	return &userLoginProfileMiner{
+		client: client,
+	}
 }
 
 func (ulp *userLoginProfileMiner) fetchConf(input any) error {
@@ -165,6 +177,12 @@ type userAccessKeyMiner struct {
 	paginator *iam.ListAccessKeysPaginator
 }
 
+func newUserAccessKeyMiner(client *iam.Client) *userAccessKeyMiner {
+	return &userAccessKeyMiner{
+		client: client,
+	}
+}
+
 func (uak *userAccessKeyMiner) fetchConf(input any) error {
 	listAccessKeysInput, ok := input.(*iam.ListAccessKeysInput)
 	if !ok {
@@ -213,6 +231,12 @@ func (uak *userAccessKeyMiner) generate(username string) ([]shared.MinerProperty
 type userMFADeviceMiner struct {
 	client    *iam.Client
 	paginator *iam.ListMFADevicesPaginator
+}
+
+func newUserMFADeviceMiner(client *iam.Client) *userMFADeviceMiner {
+	return &userMFADeviceMiner{
+		client: client,
+	}
 }
 
 func (umd *userMFADeviceMiner) fetchConf(input any) error {
@@ -288,6 +312,12 @@ type userSSHPublicKeyMiner struct {
 	paginator *iam.ListSSHPublicKeysPaginator
 }
 
+func newUserSSHPublicKeyMiner(client *iam.Client) *userSSHPublicKeyMiner {
+	return &userSSHPublicKeyMiner{
+		client: client,
+	}
+}
+
 func (uspk *userSSHPublicKeyMiner) fetchConf(input any) error {
 	sshPulicKeyInput, ok := input.(*iam.ListSSHPublicKeysInput)
 	if !ok {
@@ -351,6 +381,12 @@ type userServiceSpecificCredentialMiner struct {
 	configuration *iam.ListServiceSpecificCredentialsOutput
 }
 
+func newUserServiceSpecificCredentialMiner(client *iam.Client) *userServiceSpecificCredentialMiner {
+	return &userServiceSpecificCredentialMiner{
+		client: client,
+	}
+}
+
 func (ussc *userServiceSpecificCredentialMiner) fetchConf(input any) error {
 	listServiceSpecificCredentialsInput, ok := input.(*iam.ListServiceSpecificCredentialsInput)
 	if !ok {
@@ -402,6 +438,12 @@ func (ussc *userServiceSpecificCredentialMiner) generate(
 type userSigningCertificateMiner struct {
 	client    *iam.Client
 	paginator *iam.ListSigningCertificatesPaginator
+}
+
+func newUserSigningCertificateMiner(client *iam.Client) *userSigningCertificateMiner {
+	return &userSigningCertificateMiner{
+		client: client,
+	}
 }
 
 func (usc *userSigningCertificateMiner) fetchConf(input any) error {

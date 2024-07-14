@@ -62,6 +62,12 @@ type groupDetailMiner struct {
 	configuration *iam.GetGroupOutput
 }
 
+func newGroupDetailMiner(client *iam.Client) *groupDetailMiner {
+	return &groupDetailMiner{
+		client: client,
+	}
+}
+
 func (gd *groupDetailMiner) fetchConf(input any) error {
 	groupDetailInput, ok := input.(*iam.GetGroupInput)
 	if !ok {
