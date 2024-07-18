@@ -26,6 +26,7 @@ type caching struct {
 	groups   dataCache
 	policies dataCache
 	roles    dataCache
+	account  dataCache
 }
 
 func newCaching() *caching {
@@ -34,6 +35,7 @@ func newCaching() *caching {
 		groups:   dataCache{resource: iamGroup, caches: []cacheInfo{}},
 		policies: dataCache{resource: iamPolicy, caches: []cacheInfo{}},
 		roles:    dataCache{resource: iamRole, caches: []cacheInfo{}},
+		account:  dataCache{resource: iamAccount, caches: []cacheInfo{}},
 	}
 }
 
@@ -48,6 +50,9 @@ func (c *caching) read(ctx context.Context, client *iam.Client) error {
 		return fmt.Errorf("caching read: %w", err)
 	}
 	if err := c.readRoles(client); err != nil {
+		return fmt.Errorf("caching read: %w", err)
+	}
+	if err := c.readAccount(client); err != nil {
 		return fmt.Errorf("caching read: %w", err)
 	}
 
@@ -145,6 +150,15 @@ func (c *caching) readRoles(client *iam.Client) error {
 			})
 		}
 	}
+
+	return nil
+}
+
+func (c *caching) readAccount(client *iam.Client) error {
+	c.account.caches = append(c.account.caches, cacheInfo{
+		name: "",
+		id:   "",
+	})
 
 	return nil
 }

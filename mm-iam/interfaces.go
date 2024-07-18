@@ -28,6 +28,9 @@ var crawlerConstructors = map[string]crawlerConstructor{
 	iamRole: func(ctx context.Context, client *iam.Client) crawler {
 		return newRoleResource(client)
 	},
+	iamAccount: func(ctx context.Context, client *iam.Client) crawler {
+		return newAccountResource(client)
+	},
 }
 
 func NewCrawler(ctx context.Context, client *iam.Client, resourceType string) (crawler, error) {
@@ -99,6 +102,9 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	},
 	roleManagedPolicy: func(client *iam.Client) propsCrawler {
 		return newRoleManagedPolicyMiner(client)
+	},
+	accountPasswordPolicy: func(client *iam.Client) propsCrawler {
+		return newAccountPasswordPolicyMiner(client)
 	},
 }
 

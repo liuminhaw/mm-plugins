@@ -74,8 +74,14 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				return nil, fmt.Errorf("mine: %w", err)
 			}
 			resources = append(resources, minedResources...)
+		case iamAccount:
+			accountCrawler, err := mineResources(ctx, client, resourceType, memory.account)
+			if err != nil {
+				return nil, fmt.Errorf("mine: %w", err)
+			}
+			resources = append(resources, accountCrawler...)
 		default:
-			log.Printf("resource type: %s\n", resourceType)
+			log.Printf("Unsupported resource type: %s\n", resourceType)
 		}
 	}
 
