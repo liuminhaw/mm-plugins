@@ -87,6 +87,14 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				return nil, fmt.Errorf("mine: %w", err)
 			}
 			resources = append(resources, ssoCrawler...)
+		case iamServerCertificate:
+			serverCertificateCrawler, err := mineResources(
+				ctx, client, resourceType, dataCache{},
+			)
+			if err != nil {
+				return nil, fmt.Errorf("mine: %w", err)
+			}
+			resources = append(resources, serverCertificateCrawler...)
 		default:
 			log.Printf("Unsupported resource type: %s\n", resourceType)
 		}
@@ -102,11 +110,25 @@ func mineResources(
 	data dataCache,
 ) (shared.MinerResources, error) {
 	resources := shared.MinerResources{}
+
+	// Create a temporary dataCache if data is nil
+	if data.resource == "" && (len(data.caches) == 0 || data.caches == nil) {
+		emptyCache := cacheInfo{name: "", id: ""}
+		data = dataCache{resource: resourceType, caches: []cacheInfo{emptyCache}}
+	}
+
 	for _, cache := range data.caches {
-		log.Printf("Get %s: %s", data.resource, cache.name)
+		if cache.name == "" {
+			log.Printf("Get %s", data.resource)
+		} else {
+			log.Printf("Get %s: %s", data.resource, cache.name)
+		}
+
 		resourceCrawler, err := NewCrawler(ctx, client, resourceType)
 		if err != nil {
-			return nil, fmt.Errorf("mineResource: failed to create new crawler: %w", err)
+			return shared.MinerResources{}, fmt.Errorf(
+				"mineResources: failed to create new crawler: %w", err,
+			)
 		}
 		resource, err := resourceCrawler.generate(cache)
 		if err != nil {

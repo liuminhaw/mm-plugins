@@ -39,13 +39,17 @@ const (
 	ssoOIDCProvider = "OIDCProvider"
 	ssoSAMLProvider = "SAMLProvider"
 
+	// Server Certificate
+	serverCertificateDetail = "ServerCertificateDetail"
+
 	// crawlers
-	iamGroup        = "Groups"
-	iamUser         = "Users"
-	iamPolicy       = "Policies"
-	iamRole         = "Roles"
-	iamAccount      = "Account"
-	iamSSOProviders = "SSOProviders"
+	iamGroup             = "Groups"
+	iamUser              = "Users"
+	iamPolicy            = "Policies"
+	iamRole              = "Roles"
+	iamAccount           = "Account"
+	iamSSOProviders      = "SSOProviders"
+	iamServerCertificate = "ServerCertificate"
 
 	noConfig = "NoConfiguration"
 	noProps  = "NoProperties"
@@ -61,12 +65,7 @@ var miningResources = []string{
 	iamRole,
 	iamAccount,
 	iamSSOProviders,
-	// iamInstanceProfile,
-	// accountAlias,
-	// acessKey will use username cache, should be placed after iamUser
-	// accessKey,
-	// mfaDevice will use username cache, should be placed after iamUser
-	// mfaDevice,
+	iamServerCertificate,
 }
 
 var miningUserProps = []string{
@@ -108,6 +107,10 @@ var miningAccountProps = []string{
 var miningSSOProps = []string{
 	ssoOIDCProvider,
 	ssoSAMLProvider,
+}
+
+var miningServerCertificateProps = []string{
+	serverCertificateDetail,
 }
 
 type mmIAMError struct {
