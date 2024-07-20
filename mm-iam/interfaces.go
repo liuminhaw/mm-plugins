@@ -31,6 +31,9 @@ var crawlerConstructors = map[string]crawlerConstructor{
 	iamAccount: func(ctx context.Context, client *iam.Client) crawler {
 		return newAccountResource(client)
 	},
+	iamSSOProviders: func(ctx context.Context, client *iam.Client) crawler {
+		return newSSOProvidersResource(client)
+	},
 }
 
 func NewCrawler(ctx context.Context, client *iam.Client, resourceType string) (crawler, error) {
@@ -111,6 +114,12 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	},
 	accountAlias: func(client *iam.Client) propsCrawler {
 		return newAccountAliasMiner(client)
+	},
+	ssoOIDCProvider: func(client *iam.Client) propsCrawler {
+		return newSSOOIDCProviderMiner(client)
+	},
+	ssoSAMLProvider: func(client *iam.Client) propsCrawler {
+		return newSSOSAMLProviderMiner(client)
 	},
 }
 

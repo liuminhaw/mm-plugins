@@ -25,7 +25,7 @@ func (a *accountResource) fetchConf(input any) error {
 	return nil
 }
 
-func (a *accountResource) generate(datum cacheInfo) (shared.MinerResource, error) {
+func (a *accountResource) generate(dummy cacheInfo) (shared.MinerResource, error) {
 	resource := shared.MinerResource{
 		Identifier: "Account",
 	}

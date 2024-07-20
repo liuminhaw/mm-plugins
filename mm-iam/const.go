@@ -35,14 +35,20 @@ const (
 	accountSummary        = "AccountSummary"
 	accountAlias          = "AccountAlias"
 
+	// SSO Provider
+	ssoOIDCProvider = "OIDCProvider"
+	ssoSAMLProvider = "SAMLProvider"
+
 	// crawlers
-	iamGroup   = "Groups"
-	iamUser    = "Users"
-	iamPolicy  = "Policies"
-	iamRole    = "Roles"
-	iamAccount = "Account"
+	iamGroup        = "Groups"
+	iamUser         = "Users"
+	iamPolicy       = "Policies"
+	iamRole         = "Roles"
+	iamAccount      = "Account"
+	iamSSOProviders = "SSOProviders"
 
 	noConfig = "NoConfiguration"
+	noProps  = "NoProperties"
 
 	// equipments
 	policyEquipmentType = "policies"
@@ -54,6 +60,7 @@ var miningResources = []string{
 	iamPolicy,
 	iamRole,
 	iamAccount,
+	iamSSOProviders,
 	// iamInstanceProfile,
 	// accountAlias,
 	// acessKey will use username cache, should be placed after iamUser
@@ -96,6 +103,11 @@ var miningAccountProps = []string{
 	accountPasswordPolicy,
 	accountSummary,
 	accountAlias,
+}
+
+var miningSSOProps = []string{
+	ssoOIDCProvider,
+	ssoSAMLProvider,
 }
 
 type mmIAMError struct {

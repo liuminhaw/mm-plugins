@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -80,6 +81,12 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				return nil, fmt.Errorf("mine: %w", err)
 			}
 			resources = append(resources, accountCrawler...)
+		case iamSSOProviders:
+			ssoCrawler, err := mineResources(ctx, client, resourceType, memory.ssoProviders)
+			if err != nil {
+				return nil, fmt.Errorf("mine: %w", err)
+			}
+			resources = append(resources, ssoCrawler...)
 		default:
 			log.Printf("Unsupported resource type: %s\n", resourceType)
 		}
@@ -103,7 +110,12 @@ func mineResources(
 		}
 		resource, err := resourceCrawler.generate(cache)
 		if err != nil {
-			log.Printf("mineResource: failed to get %s properties: %v", resourceType, err)
+			var configErr *mmIAMError
+			if errors.As(err, &configErr) {
+				log.Printf("No properties in resource %s found", resourceType)
+			} else {
+				log.Printf("mineResource: failed to get %s properties: %v", resourceType, err)
+			}
 		} else {
 			resources = append(resources, resource)
 		}
