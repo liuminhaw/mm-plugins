@@ -22,22 +22,18 @@ type dataCache struct {
 }
 
 type caching struct {
-	users        dataCache
-	groups       dataCache
-	policies     dataCache
-	roles        dataCache
-	account      dataCache
-	ssoProviders dataCache
+	users    dataCache
+	groups   dataCache
+	policies dataCache
+	roles    dataCache
 }
 
 func newCaching() *caching {
 	return &caching{
-		users:        dataCache{resource: iamUser, caches: []cacheInfo{}},
-		groups:       dataCache{resource: iamGroup, caches: []cacheInfo{}},
-		policies:     dataCache{resource: iamPolicy, caches: []cacheInfo{}},
-		roles:        dataCache{resource: iamRole, caches: []cacheInfo{}},
-		account:      dataCache{resource: iamAccount, caches: []cacheInfo{}},
-		ssoProviders: dataCache{resource: iamSSOProviders, caches: []cacheInfo{}},
+		users:    dataCache{resource: iamUser, caches: []cacheInfo{}},
+		groups:   dataCache{resource: iamGroup, caches: []cacheInfo{}},
+		policies: dataCache{resource: iamPolicy, caches: []cacheInfo{}},
+		roles:    dataCache{resource: iamRole, caches: []cacheInfo{}},
 	}
 }
 
@@ -52,12 +48,6 @@ func (c *caching) read(ctx context.Context, client *iam.Client) error {
 		return fmt.Errorf("caching read: %w", err)
 	}
 	if err := c.readRoles(client); err != nil {
-		return fmt.Errorf("caching read: %w", err)
-	}
-	if err := c.readAccount(); err != nil {
-		return fmt.Errorf("caching read: %w", err)
-	}
-	if err := c.readSSOProviders(); err != nil {
 		return fmt.Errorf("caching read: %w", err)
 	}
 
@@ -155,24 +145,6 @@ func (c *caching) readRoles(client *iam.Client) error {
 			})
 		}
 	}
-
-	return nil
-}
-
-func (c *caching) readAccount() error {
-	c.account.caches = append(c.account.caches, cacheInfo{
-		name: "",
-		id:   "",
-	})
-
-	return nil
-}
-
-func (c *caching) readSSOProviders() error {
-	c.ssoProviders.caches = append(c.ssoProviders.caches, cacheInfo{
-		name: "",
-		id:   "",
-	})
 
 	return nil
 }

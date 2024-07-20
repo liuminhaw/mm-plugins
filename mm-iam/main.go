@@ -76,13 +76,13 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 			}
 			resources = append(resources, minedResources...)
 		case iamAccount:
-			accountCrawler, err := mineResources(ctx, client, resourceType, memory.account)
+			accountCrawler, err := mineResources(ctx, client, resourceType, dataCache{})
 			if err != nil {
 				return nil, fmt.Errorf("mine: %w", err)
 			}
 			resources = append(resources, accountCrawler...)
 		case iamSSOProviders:
-			ssoCrawler, err := mineResources(ctx, client, resourceType, memory.ssoProviders)
+			ssoCrawler, err := mineResources(ctx, client, resourceType, dataCache{})
 			if err != nil {
 				return nil, fmt.Errorf("mine: %w", err)
 			}
