@@ -32,6 +32,8 @@ const (
 
 	// Account
 	accountPasswordPolicy = "AccountPasswordPolicy"
+	accountSummary        = "AccountSummary"
+	accountAlias          = "AccountAlias"
 
 	// crawlers
 	iamGroup   = "Groups"
@@ -92,6 +94,8 @@ var miningRoleProps = []string{
 
 var miningAccountProps = []string{
 	accountPasswordPolicy,
+	accountSummary,
+	accountAlias,
 }
 
 type mmIAMError struct {

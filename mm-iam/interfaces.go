@@ -106,6 +106,12 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	accountPasswordPolicy: func(client *iam.Client) propsCrawler {
 		return newAccountPasswordPolicyMiner(client)
 	},
+	accountSummary: func(client *iam.Client) propsCrawler {
+		return newAccountSummaryMiner(client)
+	},
+	accountAlias: func(client *iam.Client) propsCrawler {
+		return newAccountAliasMiner(client)
+	},
 }
 
 func newPropsCrawler(client *iam.Client, propType string) (propsCrawler, error) {
