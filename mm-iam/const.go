@@ -42,6 +42,9 @@ const (
 	// Server Certificate
 	serverCertificateDetail = "ServerCertificateDetail"
 
+	// Virtual MFA
+	virtualMFADeviceDetail = "VirtualMFADeviceDetail"
+
 	// crawlers
 	iamGroup             = "Groups"
 	iamUser              = "Users"
@@ -50,12 +53,14 @@ const (
 	iamAccount           = "Account"
 	iamSSOProviders      = "SSOProviders"
 	iamServerCertificate = "ServerCertificate"
+	iamVirtualMFADevice  = "VirtualMFADevice"
 
 	noConfig = "NoConfiguration"
 	noProps  = "NoProperties"
 
 	// equipments
-	policyEquipmentType = "policies"
+	policyEquipmentType     = "policies"
+	virtualMFAEquipmentType = "virtualMFADevices"
 )
 
 var miningResources = []string{
@@ -66,6 +71,7 @@ var miningResources = []string{
 	iamAccount,
 	iamSSOProviders,
 	iamServerCertificate,
+	iamVirtualMFADevice,
 }
 
 var miningUserProps = []string{
@@ -111,6 +117,10 @@ var miningSSOProps = []string{
 
 var miningServerCertificateProps = []string{
 	serverCertificateDetail,
+}
+
+var miningVirtualMFAProps = []string{
+	virtualMFADeviceDetail,
 }
 
 type mmIAMError struct {

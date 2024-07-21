@@ -8,20 +8,33 @@ import (
 
 var ErrAttributeNotFound = errors.New("miner configuration attribute not found")
 
+type EquipmentInfo struct {
+	AcceptVals []string
+	DefaultVal string
+	TargetType string
+	TargetName string
+	TargetAttr string
+}
+
+// GetEquipAttribute read from given equipments and return the attribute value
+// that matches the given EquipmentInfo.
+// If the attribute is not found, return the default value in equipment info.
 func GetEquipAttribute(
 	equipments []shared.MinerConfigEquipment,
-	targetType, targetName, targetAttr string,
-) (string, error) {
+	info EquipmentInfo,
+) string {
 	var result string
 
 	for _, equipment := range equipments {
-		if equipment.Type == targetType && equipment.Name == targetName {
-			result = equipment.Attributes[targetAttr]
+		if equipment.Type == info.TargetType && equipment.Name == info.TargetName {
+			result = equipment.Attributes[info.TargetAttr]
 		}
 	}
 
-	if result == "" {
-		return "", ErrAttributeNotFound
+	for _, v := range info.AcceptVals {
+		if result == v {
+			return result
+		}
 	}
-	return result, nil
+	return info.DefaultVal
 }

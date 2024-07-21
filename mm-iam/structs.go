@@ -3,17 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
+	"github.com/liuminhaw/mist-miner/shared"
 	iamContext "github.com/liuminhaw/mm-plugins/mm-iam/context"
 	"github.com/liuminhaw/mm-plugins/mm-iam/utils"
 )
 
 type cacheInfo struct {
-	name string
-	id   string
+	name    string
+	id      string
+	content string
 }
 
 type dataCache struct {
@@ -22,18 +25,20 @@ type dataCache struct {
 }
 
 type caching struct {
-	users    dataCache
-	groups   dataCache
-	policies dataCache
-	roles    dataCache
+	users       dataCache
+	groups      dataCache
+	policies    dataCache
+	roles       dataCache
+	virtualMFAs dataCache
 }
 
 func newCaching() *caching {
 	return &caching{
-		users:    dataCache{resource: iamUser, caches: []cacheInfo{}},
-		groups:   dataCache{resource: iamGroup, caches: []cacheInfo{}},
-		policies: dataCache{resource: iamPolicy, caches: []cacheInfo{}},
-		roles:    dataCache{resource: iamRole, caches: []cacheInfo{}},
+		users:       dataCache{resource: iamUser, caches: []cacheInfo{}},
+		groups:      dataCache{resource: iamGroup, caches: []cacheInfo{}},
+		policies:    dataCache{resource: iamPolicy, caches: []cacheInfo{}},
+		roles:       dataCache{resource: iamRole, caches: []cacheInfo{}},
+		virtualMFAs: dataCache{resource: iamVirtualMFADevice, caches: []cacheInfo{}},
 	}
 }
 
@@ -48,6 +53,9 @@ func (c *caching) read(ctx context.Context, client *iam.Client) error {
 		return fmt.Errorf("caching read: %w", err)
 	}
 	if err := c.readRoles(client); err != nil {
+		return fmt.Errorf("caching read: %w", err)
+	}
+	if err := c.readVirtualMFAs(ctx, client); err != nil {
 		return fmt.Errorf("caching read: %w", err)
 	}
 
@@ -96,21 +104,19 @@ func (c *caching) readGroups(client *iam.Client) error {
 
 func (c *caching) readPolicies(ctx context.Context, client *iam.Client) error {
 	equipments := iamContext.Equipments(ctx)
-	listPoliciesScope, _ := utils.GetEquipAttribute(
+	listPoliciesScope := utils.GetEquipAttribute(
 		equipments,
-		policyEquipmentType,
-		"list",
-		"scope",
+		utils.EquipmentInfo{
+			TargetType: policyEquipmentType,
+			TargetName: "list",
+			TargetAttr: "scope",
+			DefaultVal: "Local",
+			AcceptVals: []string{"Local", "AWS", "All"},
+		},
 	)
+	log.Printf("listPoliciesScope: %s\n", listPoliciesScope)
 
-	var input iam.ListPoliciesInput
-	switch listPoliciesScope {
-	case "Local", "AWS", "All":
-		input = iam.ListPoliciesInput{Scope: types.PolicyScopeType(listPoliciesScope)}
-	default:
-		input = iam.ListPoliciesInput{Scope: types.PolicyScopeType("Local")}
-	}
-
+	input := iam.ListPoliciesInput{Scope: types.PolicyScopeType(listPoliciesScope)}
 	paginator := iam.NewListPoliciesPaginator(client, &input)
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(context.Background())
@@ -142,6 +148,50 @@ func (c *caching) readRoles(client *iam.Client) error {
 			c.roles.caches = append(c.roles.caches, cacheInfo{
 				name: aws.ToString(role.RoleName),
 				id:   aws.ToString(role.RoleId),
+			})
+		}
+	}
+
+	return nil
+}
+
+func (c *caching) readVirtualMFAs(ctx context.Context, client *iam.Client) error {
+	listVirtualMFAAssignStatus := utils.GetEquipAttribute(
+		iamContext.Equipments(ctx),
+		utils.EquipmentInfo{
+			TargetType: virtualMFAEquipmentType,
+			TargetName: "mine",
+			TargetAttr: "assignmentStatus",
+			DefaultVal: "Any",
+			AcceptVals: []string{"Any", "Assigned", "Unassigned"},
+		},
+	)
+	log.Printf("listVirtualMFAAssignStatus: %s\n", listVirtualMFAAssignStatus)
+
+	input := iam.ListVirtualMFADevicesInput{
+		AssignmentStatus: types.AssignmentStatusType(listVirtualMFAAssignStatus),
+	}
+	paginator := iam.NewListVirtualMFADevicesPaginator(client, &input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("caching readVirtualMFAs: %w", err)
+		}
+
+		for _, device := range page.VirtualMFADevices {
+			marshaledDevice, err := shared.JsonMarshal(device)
+			if err != nil {
+				return fmt.Errorf("caching readVirtualMFAs: %w", err)
+			}
+			normalizedDevice, err := shared.JsonNormalize(string(marshaledDevice))
+			if err != nil {
+				return fmt.Errorf("caching readVirtualMFAs: %w", err)
+			}
+
+			c.virtualMFAs.caches = append(c.virtualMFAs.caches, cacheInfo{
+				name:    aws.ToString(device.SerialNumber),
+				id:      aws.ToString(device.SerialNumber),
+				content: string(normalizedDevice),
 			})
 		}
 	}

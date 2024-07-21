@@ -42,7 +42,7 @@ func (u *userResource) generate(datum cacheInfo) (shared.MinerResource, error) {
 		if err != nil {
 			return resource, fmt.Errorf("generate userResource: %w", err)
 		}
-		userProps, err := userPropsCrawler.generate(datum.name)
+		userProps, err := userPropsCrawler.generate(datum)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {
@@ -85,10 +85,10 @@ func (ud *userDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ud *userDetailMiner) generate(username string) ([]shared.MinerProperty, error) {
+func (ud *userDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ud.fetchConf(&iam.GetUserInput{UserName: aws.String(username)}); err != nil {
+	if err := ud.fetchConf(&iam.GetUserInput{UserName: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generateUserDetail: %w", err)
 	}
 
@@ -146,10 +146,10 @@ func (ulp *userLoginProfileMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ulp *userLoginProfileMiner) generate(username string) ([]shared.MinerProperty, error) {
+func (ulp *userLoginProfileMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ulp.fetchConf(&iam.GetLoginProfileInput{UserName: aws.String(username)}); err != nil {
+	if err := ulp.fetchConf(&iam.GetLoginProfileInput{UserName: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generate userLoginProfile: %w", err)
 	}
 
@@ -193,10 +193,10 @@ func (uak *userAccessKeyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (uak *userAccessKeyMiner) generate(username string) ([]shared.MinerProperty, error) {
+func (uak *userAccessKeyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := uak.fetchConf(&iam.ListAccessKeysInput{UserName: aws.String(username)}); err != nil {
+	if err := uak.fetchConf(&iam.ListAccessKeysInput{UserName: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generate userAccessKey: %w", err)
 	}
 
@@ -249,10 +249,10 @@ func (umd *userMFADeviceMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (umd *userMFADeviceMiner) generate(username string) ([]shared.MinerProperty, error) {
+func (umd *userMFADeviceMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := umd.fetchConf(&iam.ListMFADevicesInput{UserName: aws.String(username)}); err != nil {
+	if err := umd.fetchConf(&iam.ListMFADevicesInput{UserName: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generate userMFADevice: %w", err)
 	}
 
@@ -328,10 +328,10 @@ func (uspk *userSSHPublicKeyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (uspk *userSSHPublicKeyMiner) generate(username string) ([]shared.MinerProperty, error) {
+func (uspk *userSSHPublicKeyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := uspk.fetchConf(&iam.ListSSHPublicKeysInput{UserName: aws.String(username)}); err != nil {
+	if err := uspk.fetchConf(&iam.ListSSHPublicKeysInput{UserName: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generate userSSHPublicKey: %w", err)
 	}
 
@@ -347,7 +347,7 @@ func (uspk *userSSHPublicKeyMiner) generate(username string) ([]shared.MinerProp
 				&iam.GetSSHPublicKeyInput{
 					Encoding:       types.EncodingTypePem,
 					SSHPublicKeyId: keyMetadata.SSHPublicKeyId,
-					UserName:       aws.String(username),
+					UserName:       aws.String(datum.name),
 				},
 			)
 			if err != nil {
@@ -406,11 +406,11 @@ func (ussc *userServiceSpecificCredentialMiner) fetchConf(input any) error {
 }
 
 func (ussc *userServiceSpecificCredentialMiner) generate(
-	username string,
+	datum cacheInfo,
 ) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ussc.fetchConf(&iam.ListServiceSpecificCredentialsInput{UserName: aws.String(username)}); err != nil {
+	if err := ussc.fetchConf(&iam.ListServiceSpecificCredentialsInput{UserName: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generate userServiceSpecificCredential: %w", err)
 	}
 
@@ -459,10 +459,10 @@ func (usc *userSigningCertificateMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (usc *userSigningCertificateMiner) generate(username string) ([]shared.MinerProperty, error) {
+func (usc *userSigningCertificateMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := usc.fetchConf(&iam.ListSigningCertificatesInput{UserName: aws.String(username)}); err != nil {
+	if err := usc.fetchConf(&iam.ListSigningCertificatesInput{UserName: aws.String(datum.name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate userSigningCertificate: %w", err)
 	}
 
@@ -521,10 +521,10 @@ func (uip *userInlinePolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (uip *userInlinePolicyMiner) generate(userName string) ([]shared.MinerProperty, error) {
+func (uip *userInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := uip.fetchConf(&iam.ListUserPoliciesInput{UserName: aws.String(userName)}); err != nil {
+	if err := uip.fetchConf(&iam.ListUserPoliciesInput{UserName: aws.String(datum.name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate userInlinePolicy: %w", err)
 	}
 
@@ -539,7 +539,7 @@ func (uip *userInlinePolicyMiner) generate(userName string) ([]shared.MinerPrope
 				context.Background(),
 				&iam.GetUserPolicyInput{
 					PolicyName: aws.String(policyName),
-					UserName:   aws.String(userName),
+					UserName:   aws.String(datum.name),
 				},
 			)
 			if err != nil {
@@ -598,10 +598,10 @@ func (ump *userManagedPolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ump *userManagedPolicyMiner) generate(userName string) ([]shared.MinerProperty, error) {
+func (ump *userManagedPolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ump.fetchConf(&iam.ListAttachedUserPoliciesInput{UserName: aws.String(userName)}); err != nil {
+	if err := ump.fetchConf(&iam.ListAttachedUserPoliciesInput{UserName: aws.String(datum.name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate userManagedPolicy: %w", err)
 	}
 
@@ -654,10 +654,10 @@ func (ug *userGroupsMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ug *userGroupsMiner) generate(userName string) ([]shared.MinerProperty, error) {
+func (ug *userGroupsMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ug.fetchConf(&iam.ListGroupsForUserInput{UserName: aws.String(userName)}); err != nil {
+	if err := ug.fetchConf(&iam.ListGroupsForUserInput{UserName: aws.String(datum.name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate userGroups: %w", err)
 	}
 

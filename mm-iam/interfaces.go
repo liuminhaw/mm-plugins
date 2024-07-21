@@ -37,6 +37,9 @@ var crawlerConstructors = map[string]crawlerConstructor{
 	iamServerCertificate: func(ctx context.Context, client *iam.Client) crawler {
 		return newServerCertificateResource(client)
 	},
+	iamVirtualMFADevice: func(ctx context.Context, client *iam.Client) crawler {
+		return newVirtualMFADeviceResource(client)
+	},
 }
 
 func NewCrawler(ctx context.Context, client *iam.Client, resourceType string) (crawler, error) {
@@ -49,7 +52,7 @@ func NewCrawler(ctx context.Context, client *iam.Client, resourceType string) (c
 
 type propsCrawler interface {
 	fetchConf(any) error
-	generate(string) ([]shared.MinerProperty, error)
+	generate(cacheInfo) ([]shared.MinerProperty, error)
 }
 
 type propsCrawlerConstructor func(client *iam.Client) propsCrawler
@@ -126,6 +129,9 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	},
 	serverCertificateDetail: func(client *iam.Client) propsCrawler {
 		return newServerCertificateDetailMiner(client)
+	},
+	virtualMFADeviceDetail: func(client *iam.Client) propsCrawler {
+		return newVirtualMFADeviceDetailMiner(client)
 	},
 }
 

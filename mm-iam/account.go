@@ -37,7 +37,7 @@ func (a *accountResource) generate(dummy cacheInfo) (shared.MinerResource, error
 		if err != nil {
 			return shared.MinerResource{}, fmt.Errorf("generate accountResource: %w", err)
 		}
-		accountProps, err := accountPropsCrawler.generate("")
+		accountProps, err := accountPropsCrawler.generate(dummy)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {
@@ -79,7 +79,7 @@ func (pp *accountPasswordPolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (pp *accountPasswordPolicyMiner) generate(dummy string) ([]shared.MinerProperty, error) {
+func (pp *accountPasswordPolicyMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
 	if err := pp.fetchConf(nil); err != nil {
@@ -130,7 +130,7 @@ func (as *accountSummaryMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (as *accountSummaryMiner) generate(dummy string) ([]shared.MinerProperty, error) {
+func (as *accountSummaryMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
 	if err := as.fetchConf(nil); err != nil {
@@ -178,7 +178,7 @@ func (aa *accountAliasMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (aa *accountAliasMiner) generate(dummy string) ([]shared.MinerProperty, error) {
+func (aa *accountAliasMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
 	if err := aa.fetchConf(&iam.ListAccountAliasesInput{}); err != nil {

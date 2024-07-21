@@ -38,7 +38,7 @@ func (s *serverCertificateResource) generate(dummy cacheInfo) (shared.MinerResou
 		if err != nil {
 			return shared.MinerResource{}, fmt.Errorf("generate serverCertificateResource: %w", err)
 		}
-		serverCertificateProps, err := serverCertificatePropsCrawler.generate("")
+		serverCertificateProps, err := serverCertificatePropsCrawler.generate(dummy)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {
@@ -83,7 +83,7 @@ func (sc *serverCertificateDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (sc *serverCertificateDetailMiner) generate(dummy string) ([]shared.MinerProperty, error) {
+func (sc *serverCertificateDetailMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
 	if err := sc.fetchConf(&iam.ListServerCertificatesInput{}); err != nil {

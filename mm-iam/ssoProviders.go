@@ -38,7 +38,7 @@ func (s *ssoProvidersResource) generate(dummy cacheInfo) (shared.MinerResource, 
 		if err != nil {
 			return shared.MinerResource{}, fmt.Errorf("generate ssoResource: %w", err)
 		}
-		ssoProps, err := ssoPropsCrawler.generate("")
+		ssoProps, err := ssoPropsCrawler.generate(dummy)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {
@@ -85,7 +85,7 @@ func (op *ssoOIDCProviderMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (op *ssoOIDCProviderMiner) generate(dummy string) ([]shared.MinerProperty, error) {
+func (op *ssoOIDCProviderMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
 	if err := op.fetchConf(""); err != nil {
@@ -148,7 +148,7 @@ func (sp *ssoSAMLProviderMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (sp *ssoSAMLProviderMiner) generate(dummy string) ([]shared.MinerProperty, error) {
+func (sp *ssoSAMLProviderMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
 	if err := sp.fetchConf(""); err != nil {

@@ -39,7 +39,7 @@ func (r *roleResource) generate(datum cacheInfo) (shared.MinerResource, error) {
 		if err != nil {
 			return resource, fmt.Errorf("generate roleResource: %w", err)
 		}
-		roleProps, err := rolePropsCrawler.generate(datum.name)
+		roleProps, err := rolePropsCrawler.generate(datum)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {
@@ -82,10 +82,10 @@ func (rd *roleDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (rd *roleDetailMiner) generate(roleName string) ([]shared.MinerProperty, error) {
+func (rd *roleDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := rd.fetchConf(&iam.GetRoleInput{RoleName: aws.String(roleName)}); err != nil {
+	if err := rd.fetchConf(&iam.GetRoleInput{RoleName: aws.String(datum.name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate roleDetail: %w", err)
 	}
 
@@ -139,10 +139,10 @@ func (rip *roleInlinePolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (rip *roleInlinePolicyMiner) generate(roleName string) ([]shared.MinerProperty, error) {
+func (rip *roleInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := rip.fetchConf(&iam.ListRolePoliciesInput{RoleName: aws.String(roleName)}); err != nil {
+	if err := rip.fetchConf(&iam.ListRolePoliciesInput{RoleName: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generate roleInlinePolicy: %w", err)
 	}
 
@@ -157,7 +157,7 @@ func (rip *roleInlinePolicyMiner) generate(roleName string) ([]shared.MinerPrope
 				context.Background(),
 				&iam.GetRolePolicyInput{
 					PolicyName: aws.String(policyName),
-					RoleName:   aws.String(roleName),
+					RoleName:   aws.String(datum.name),
 				},
 			)
 			if err != nil {
@@ -215,10 +215,10 @@ func (rmp *roleManagedPolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (rmp *roleManagedPolicyMiner) generate(roleName string) ([]shared.MinerProperty, error) {
+func (rmp *roleManagedPolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := rmp.fetchConf(&iam.ListAttachedRolePoliciesInput{RoleName: aws.String(roleName)}); err != nil {
+	if err := rmp.fetchConf(&iam.ListAttachedRolePoliciesInput{RoleName: aws.String(datum.name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate roleManagedPolicy: %w", err)
 	}
 

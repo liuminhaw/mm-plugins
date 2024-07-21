@@ -95,6 +95,12 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				return nil, fmt.Errorf("mine: %w", err)
 			}
 			resources = append(resources, serverCertificateCrawler...)
+		case iamVirtualMFADevice:
+			virtualMFACrawler, err := mineResources(ctx, client, resourceType, memory.virtualMFAs)
+			if err != nil {
+				return nil, fmt.Errorf("mine: %w", err)
+			}
+			resources = append(resources, virtualMFACrawler...)
 		default:
 			log.Printf("Unsupported resource type: %s\n", resourceType)
 		}

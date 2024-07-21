@@ -39,7 +39,7 @@ func (p *policyResource) generate(datum cacheInfo) (shared.MinerResource, error)
 		if err != nil {
 			return resource, fmt.Errorf("generate policyResource: %w", err)
 		}
-		policyProps, err := policyPropsCrawler.generate(datum.name)
+		policyProps, err := policyPropsCrawler.generate(datum)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {
@@ -82,10 +82,10 @@ func (pd *policyDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (pd *policyDetailMiner) generate(policyArn string) ([]shared.MinerProperty, error) {
+func (pd *policyDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := pd.fetchConf(&iam.GetPolicyInput{PolicyArn: aws.String(policyArn)}); err != nil {
+	if err := pd.fetchConf(&iam.GetPolicyInput{PolicyArn: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generate policyDetail: %w", err)
 	}
 
@@ -130,10 +130,10 @@ func (pv *policyVersionsMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (pv *policyVersionsMiner) generate(policyArn string) ([]shared.MinerProperty, error) {
+func (pv *policyVersionsMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := pv.fetchConf(&iam.ListPolicyVersionsInput{PolicyArn: aws.String(policyArn)}); err != nil {
+	if err := pv.fetchConf(&iam.ListPolicyVersionsInput{PolicyArn: aws.String(datum.name)}); err != nil {
 		return properties, fmt.Errorf("generate policyVersions: %w", err)
 	}
 
@@ -147,7 +147,7 @@ func (pv *policyVersionsMiner) generate(policyArn string) ([]shared.MinerPropert
 			pv.configuration, err = pv.client.GetPolicyVersion(
 				context.Background(),
 				&iam.GetPolicyVersionInput{
-					PolicyArn: aws.String(policyArn),
+					PolicyArn: aws.String(datum.name),
 					VersionId: version.VersionId,
 				},
 			)
