@@ -133,6 +133,9 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	virtualMFADeviceDetail: func(client *iam.Client) propsCrawler {
 		return newVirtualMFADeviceDetailMiner(client)
 	},
+	virtualMFADeviceTags: func(client *iam.Client) propsCrawler {
+		return newVirtualMFADeviceTagsMiner(client)
+	},
 }
 
 func newPropsCrawler(client *iam.Client, propType string) (propsCrawler, error) {

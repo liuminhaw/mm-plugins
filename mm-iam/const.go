@@ -44,6 +44,7 @@ const (
 
 	// Virtual MFA
 	virtualMFADeviceDetail = "VirtualMFADeviceDetail"
+	virtualMFADeviceTags   = "VirtualMFADeviceTags"
 
 	// crawlers
 	iamGroup             = "Groups"
@@ -121,6 +122,7 @@ var miningServerCertificateProps = []string{
 
 var miningVirtualMFAProps = []string{
 	virtualMFADeviceDetail,
+	virtualMFADeviceTags,
 }
 
 type mmIAMError struct {

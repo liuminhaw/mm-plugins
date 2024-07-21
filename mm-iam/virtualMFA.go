@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/liuminhaw/mist-miner/shared"
 )
@@ -49,16 +51,16 @@ func (v *virtualMFADeviceResource) generate(datum cacheInfo) (shared.MinerResour
 		}
 
 	}
-     
-    // Check if there are any properties
-    if resource.Properties == nil || len(resource.Properties) == 0 {
-        return shared.MinerResource{}, &mmIAMError{"VirtualMFADevice", noProps}
-    }
+
+	// Check if there are any properties
+	if resource.Properties == nil || len(resource.Properties) == 0 {
+		return shared.MinerResource{}, &mmIAMError{"VirtualMFADevice", noProps}
+	}
 
 	return resource, nil
 }
 
-// virtualMFA detail
+// virtualMFA devices detail
 type virtualMFADeviceDetailMiner struct {
 	client *iam.Client
 }
@@ -84,10 +86,67 @@ func (vmd *virtualMFADeviceDetailMiner) generate(datum cacheInfo) ([]shared.Mine
 		},
 		Content: shared.MinerPropertyContent{
 			Format: shared.FormatJson,
-            Value: datum.content,
+			Value:  datum.content,
 		},
 	}
-    properties = append(properties, property)
+	properties = append(properties, property)
 
-    return properties, nil
+	return properties, nil
+}
+
+// virtualMFA device tags
+type virtualMFADeviceTagsMiner struct {
+	client    *iam.Client
+	paginator *iam.ListMFADeviceTagsPaginator
+}
+
+func newVirtualMFADeviceTagsMiner(client *iam.Client) propsCrawler {
+	return &virtualMFADeviceTagsMiner{
+		client: client,
+	}
+}
+
+func (vmt *virtualMFADeviceTagsMiner) fetchConf(input any) error {
+	mfaDeviceTagsInput, ok := input.(*iam.ListMFADeviceTagsInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListMFADeviceTagsInput type assertion failed")
+	}
+
+	vmt.paginator = iam.NewListMFADeviceTagsPaginator(vmt.client, mfaDeviceTagsInput)
+	return nil
+}
+
+func (vmt *virtualMFADeviceTagsMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+	properties := []shared.MinerProperty{}
+
+	if err := vmt.fetchConf(&iam.ListMFADeviceTagsInput{SerialNumber: aws.String(datum.id)}); err != nil {
+		return nil, fmt.Errorf("generate virtualMFADeviceTags: %w", err)
+	}
+
+	for vmt.paginator.HasMorePages() {
+		page, err := vmt.paginator.NextPage(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("generate virtualMFADeviceTags: %w", err)
+		}
+
+		for _, tag := range page.Tags {
+			property := shared.MinerProperty{
+				Type: virtualMFADeviceTags,
+				Label: shared.MinerPropertyLabel{
+					Name:   aws.ToString(tag.Key),
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatText,
+				},
+			}
+			if err := property.FormatContentValue(aws.ToString(tag.Value)); err != nil {
+				return nil, fmt.Errorf("generate virtualMFADeviceTags: %w", err)
+			}
+
+			properties = append(properties, property)
+		}
+	}
+
+	return properties, nil
 }
