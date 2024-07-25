@@ -26,9 +26,10 @@ const (
 	policyVersions = "PolicyVersions"
 
 	// roles
-	roleDetail        = "RoleDetail"
-	roleInlinePolicy  = "RoleInlinePolicy"
-	roleManagedPolicy = "RoleManagedPolicy"
+	roleDetail          = "RoleDetail"
+	roleInlinePolicy    = "RoleInlinePolicy"
+	roleManagedPolicy   = "RoleManagedPolicy"
+	roleInstanceProfile = "RoleInstanceProfile"
 
 	// Account
 	accountPasswordPolicy = "AccountPasswordPolicy"
@@ -108,6 +109,7 @@ var miningRoleProps = []string{
 	roleDetail,
 	roleInlinePolicy,
 	roleManagedPolicy,
+	roleInstanceProfile,
 }
 
 var miningAccountProps = []string{

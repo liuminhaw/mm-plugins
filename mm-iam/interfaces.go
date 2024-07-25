@@ -115,6 +115,9 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	roleManagedPolicy: func(client *iam.Client) propsCrawler {
 		return newRoleManagedPolicyMiner(client)
 	},
+	roleInstanceProfile: func(client *iam.Client) propsCrawler {
+		return newRoleInstanceProfileMiner(client)
+	},
 	accountPasswordPolicy: func(client *iam.Client) propsCrawler {
 		return newAccountPasswordPolicyMiner(client)
 	},

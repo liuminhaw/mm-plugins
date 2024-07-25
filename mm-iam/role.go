@@ -248,3 +248,72 @@ func (rmp *roleManagedPolicyMiner) generate(datum cacheInfo) ([]shared.MinerProp
 
 	return properties, nil
 }
+
+// role's instance profile
+type roleInstanceProfileMiner struct {
+	client    *iam.Client
+	paginator *iam.ListInstanceProfilesForRolePaginator
+}
+
+func newRoleInstanceProfileMiner(client *iam.Client) propsCrawler {
+	return &roleInstanceProfileMiner{
+		client: client,
+	}
+}
+
+func (rip *roleInstanceProfileMiner) fetchConf(input any) error {
+	roleInstanceProfileInput, ok := input.(*iam.ListInstanceProfilesForRoleInput)
+	if !ok {
+		return fmt.Errorf("fetchConf: ListInstanceProfilesForRoleInput type assertion failed")
+	}
+
+	rip.paginator = iam.NewListInstanceProfilesForRolePaginator(
+		rip.client,
+		roleInstanceProfileInput,
+	)
+	return nil
+}
+
+func (rip *roleInstanceProfileMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+	type instanceProfileInfo struct {
+		Name string `json:"name"`
+		Id   string `json:"id"`
+		Arn  string `json:"arn"`
+	}
+
+	properties := []shared.MinerProperty{}
+
+	if err := rip.fetchConf(&iam.ListInstanceProfilesForRoleInput{RoleName: aws.String(datum.name)}); err != nil {
+		return nil, fmt.Errorf("generate roleInstanceProfile: %w", err)
+	}
+
+	for rip.paginator.HasMorePages() {
+		page, err := rip.paginator.NextPage(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("generate roleInstanceProfile: %w", err)
+		}
+
+		for _, profile := range page.InstanceProfiles {
+			property := shared.MinerProperty{
+				Type: roleInstanceProfile,
+				Label: shared.MinerPropertyLabel{
+					Name:   aws.ToString(profile.InstanceProfileId),
+					Unique: true,
+				},
+				Content: shared.MinerPropertyContent{
+					Format: shared.FormatJson,
+				},
+			}
+			if err := property.FormatContentValue(instanceProfileInfo{
+				Name: aws.ToString(profile.InstanceProfileName),
+				Id:   aws.ToString(profile.InstanceProfileId),
+				Arn:  aws.ToString(profile.Arn),
+			}); err != nil {
+				return nil, fmt.Errorf("generate roleInstanceProfile: %w", err)
+			}
+			properties = append(properties, property)
+		}
+	}
+
+	return properties, nil
+}
