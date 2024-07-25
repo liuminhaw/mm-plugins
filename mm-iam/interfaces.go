@@ -40,6 +40,9 @@ var crawlerConstructors = map[string]crawlerConstructor{
 	iamVirtualMFADevice: func(ctx context.Context, client *iam.Client) crawler {
 		return newVirtualMFADeviceResource(client)
 	},
+	iamInstanceProfile: func(ctx context.Context, client *iam.Client) crawler {
+		return newInstanceProfileResource(client)
+	},
 }
 
 func NewCrawler(ctx context.Context, client *iam.Client, resourceType string) (crawler, error) {
@@ -135,6 +138,9 @@ var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
 	},
 	virtualMFADeviceTags: func(client *iam.Client) propsCrawler {
 		return newVirtualMFADeviceTagsMiner(client)
+	},
+	instanceProfileDetail: func(client *iam.Client) propsCrawler {
+		return newInstanceProfileDetailMiner(client)
 	},
 }
 

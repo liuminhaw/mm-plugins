@@ -25,20 +25,22 @@ type dataCache struct {
 }
 
 type caching struct {
-	users       dataCache
-	groups      dataCache
-	policies    dataCache
-	roles       dataCache
-	virtualMFAs dataCache
+	users            dataCache
+	groups           dataCache
+	policies         dataCache
+	roles            dataCache
+	virtualMFAs      dataCache
+	instanceProfiles dataCache
 }
 
 func newCaching() *caching {
 	return &caching{
-		users:       dataCache{resource: iamUser, caches: []cacheInfo{}},
-		groups:      dataCache{resource: iamGroup, caches: []cacheInfo{}},
-		policies:    dataCache{resource: iamPolicy, caches: []cacheInfo{}},
-		roles:       dataCache{resource: iamRole, caches: []cacheInfo{}},
-		virtualMFAs: dataCache{resource: iamVirtualMFADevice, caches: []cacheInfo{}},
+		users:            dataCache{resource: iamUser, caches: []cacheInfo{}},
+		groups:           dataCache{resource: iamGroup, caches: []cacheInfo{}},
+		policies:         dataCache{resource: iamPolicy, caches: []cacheInfo{}},
+		roles:            dataCache{resource: iamRole, caches: []cacheInfo{}},
+		virtualMFAs:      dataCache{resource: iamVirtualMFADevice, caches: []cacheInfo{}},
+		instanceProfiles: dataCache{resource: iamInstanceProfile, caches: []cacheInfo{}},
 	}
 }
 
@@ -56,6 +58,9 @@ func (c *caching) read(ctx context.Context, client *iam.Client) error {
 		return fmt.Errorf("caching read: %w", err)
 	}
 	if err := c.readVirtualMFAs(ctx, client); err != nil {
+		return fmt.Errorf("caching read: %w", err)
+	}
+	if err := c.readInstanceProfiles(client); err != nil {
 		return fmt.Errorf("caching read: %w", err)
 	}
 
@@ -192,6 +197,26 @@ func (c *caching) readVirtualMFAs(ctx context.Context, client *iam.Client) error
 				name:    aws.ToString(device.SerialNumber),
 				id:      aws.ToString(device.SerialNumber),
 				content: string(normalizedDevice),
+			})
+		}
+	}
+
+	return nil
+}
+
+func (c *caching) readInstanceProfiles(client *iam.Client) error {
+	paginator := iam.NewListInstanceProfilesPaginator(client, &iam.ListInstanceProfilesInput{})
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("caching readInstanceProfiles: %w", err)
+		}
+
+		for _, profile := range page.InstanceProfiles {
+			c.instanceProfiles.caches = append(c.instanceProfiles.caches, cacheInfo{
+				name: aws.ToString(profile.InstanceProfileName),
+				id:   aws.ToString(profile.InstanceProfileId),
 			})
 		}
 	}

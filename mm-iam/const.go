@@ -46,6 +46,9 @@ const (
 	virtualMFADeviceDetail = "VirtualMFADeviceDetail"
 	virtualMFADeviceTags   = "VirtualMFADeviceTags"
 
+	// Instance Profile
+	instanceProfileDetail = "InstanceProfileDetail"
+
 	// crawlers
 	iamGroup             = "Groups"
 	iamUser              = "Users"
@@ -55,6 +58,7 @@ const (
 	iamSSOProviders      = "SSOProviders"
 	iamServerCertificate = "ServerCertificate"
 	iamVirtualMFADevice  = "VirtualMFADevice"
+	iamInstanceProfile   = "InstanceProfile"
 
 	noConfig = "NoConfiguration"
 	noProps  = "NoProperties"
@@ -73,6 +77,7 @@ var miningResources = []string{
 	iamSSOProviders,
 	iamServerCertificate,
 	iamVirtualMFADevice,
+	iamInstanceProfile,
 }
 
 var miningUserProps = []string{
@@ -123,6 +128,10 @@ var miningServerCertificateProps = []string{
 var miningVirtualMFAProps = []string{
 	virtualMFADeviceDetail,
 	virtualMFADeviceTags,
+}
+
+var miningInstanceProfileProps = []string{
+	instanceProfileDetail,
 }
 
 type mmIAMError struct {

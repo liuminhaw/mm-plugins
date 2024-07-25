@@ -101,6 +101,17 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				return nil, fmt.Errorf("mine: %w", err)
 			}
 			resources = append(resources, virtualMFACrawler...)
+		case iamInstanceProfile:
+			instanceProfileCrawler, err := mineResources(
+				ctx,
+				client,
+				resourceType,
+				memory.instanceProfiles,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("mine: %w", err)
+			}
+			resources = append(resources, instanceProfileCrawler...)
 		default:
 			log.Printf("Unsupported resource type: %s\n", resourceType)
 		}
