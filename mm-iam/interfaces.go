@@ -2,155 +2,150 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	"github.com/liuminhaw/mist-miner/shared"
+	"github.com/liuminhaw/mm-plugins/utils"
 )
 
-type crawler interface {
-	fetchConf(any) error
-	generate(cacheInfo) (shared.MinerResource, error)
-}
-
-type crawlerConstructor func(ctx context.Context, client *iam.Client) crawler
-
-var crawlerConstructors = map[string]crawlerConstructor{
-	iamUser: func(ctx context.Context, client *iam.Client) crawler {
+var crawlerConstructors = map[string]utils.CrawlerConstructor{
+	iamUser: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newUserResource(client)
 	},
-	iamGroup: func(ctx context.Context, client *iam.Client) crawler {
+	iamGroup: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newGroupResource(client)
 	},
-	iamPolicy: func(ctx context.Context, client *iam.Client) crawler {
+	iamPolicy: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newPolicyResource(client)
 	},
-	iamRole: func(ctx context.Context, client *iam.Client) crawler {
+	iamRole: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newRoleResource(client)
 	},
-	iamAccount: func(ctx context.Context, client *iam.Client) crawler {
+	iamAccount: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newAccountResource(client)
 	},
-	iamSSOProviders: func(ctx context.Context, client *iam.Client) crawler {
+	iamSSOProviders: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newSSOProvidersResource(client)
 	},
-	iamServerCertificate: func(ctx context.Context, client *iam.Client) crawler {
+	iamServerCertificate: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newServerCertificateResource(client)
 	},
-	iamVirtualMFADevice: func(ctx context.Context, client *iam.Client) crawler {
+	iamVirtualMFADevice: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newVirtualMFADeviceResource(client)
 	},
-	iamInstanceProfile: func(ctx context.Context, client *iam.Client) crawler {
+	iamInstanceProfile: func(ctx context.Context, client *iam.Client) utils.Crawler {
 		return newInstanceProfileResource(client)
 	},
 }
 
-func NewCrawler(ctx context.Context, client *iam.Client, resourceType string) (crawler, error) {
-	constructor, ok := crawlerConstructors[resourceType]
-	if !ok {
-		return nil, fmt.Errorf("New crawler: unknown property type: %s", resourceType)
-	}
-	return constructor(ctx, client), nil
-}
+type propsCrawlerConstructor func(client *iam.Client) utils.PropsCrawler
 
-type propsCrawler interface {
-	fetchConf(any) error
-	generate(cacheInfo) ([]shared.MinerProperty, error)
-}
-
-type propsCrawlerConstructor func(client *iam.Client) propsCrawler
-
-var propsCrawlerConstructors = map[string]propsCrawlerConstructor{
-	userDetail: func(client *iam.Client) propsCrawler {
+var userPropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserDetailMiner(client)
 	},
-	userLoginProfile: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserLoginProfileMiner(client)
 	},
-	userAccessKey: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserAccessKeyMiner(client)
 	},
-	userMFADevice: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserMFADeviceMiner(client)
 	},
-	userSSHPublicKey: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserSSHPublicKeyMiner(client)
 	},
-	userServiceSpecificCredential: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserServiceSpecificCredentialMiner(client)
 	},
-	userSigningCertificate: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserSigningCertificateMiner(client)
 	},
-	userGroups: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserGroupsMiner(client)
 	},
-	userInlinePolicy: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserInlinePolicyMiner(client)
 	},
-	userManagedPolicy: func(client *iam.Client) propsCrawler {
+	func(client *iam.Client) utils.PropsCrawler {
 		return newUserManagedPolicyMiner(client)
-	},
-	groupDetail: func(client *iam.Client) propsCrawler {
-		return newGroupDetailMiner(client)
-	},
-	groupInlinePolicy: func(client *iam.Client) propsCrawler {
-		return newGroupInlinePolicyMiner(client)
-	},
-	groupManagedPolicy: func(client *iam.Client) propsCrawler {
-		return newGroupManagedPolicyMiner(client)
-	},
-	policyDetail: func(client *iam.Client) propsCrawler {
-		return newPolicyDetailMiner(client)
-	},
-	policyVersions: func(client *iam.Client) propsCrawler {
-		return newPolicyVersionsMiner(client)
-	},
-	roleDetail: func(client *iam.Client) propsCrawler {
-		return newRoleDetailMiner(client)
-	},
-	roleInlinePolicy: func(client *iam.Client) propsCrawler {
-		return newRoleInlinePolicyMiner(client)
-	},
-	roleManagedPolicy: func(client *iam.Client) propsCrawler {
-		return newRoleManagedPolicyMiner(client)
-	},
-	roleInstanceProfile: func(client *iam.Client) propsCrawler {
-		return newRoleInstanceProfileMiner(client)
-	},
-	accountPasswordPolicy: func(client *iam.Client) propsCrawler {
-		return newAccountPasswordPolicyMiner(client)
-	},
-	accountSummary: func(client *iam.Client) propsCrawler {
-		return newAccountSummaryMiner(client)
-	},
-	accountAlias: func(client *iam.Client) propsCrawler {
-		return newAccountAliasMiner(client)
-	},
-	ssoOIDCProvider: func(client *iam.Client) propsCrawler {
-		return newSSOOIDCProviderMiner(client)
-	},
-	ssoSAMLProvider: func(client *iam.Client) propsCrawler {
-		return newSSOSAMLProviderMiner(client)
-	},
-	serverCertificateDetail: func(client *iam.Client) propsCrawler {
-		return newServerCertificateDetailMiner(client)
-	},
-	virtualMFADeviceDetail: func(client *iam.Client) propsCrawler {
-		return newVirtualMFADeviceDetailMiner(client)
-	},
-	virtualMFADeviceTags: func(client *iam.Client) propsCrawler {
-		return newVirtualMFADeviceTagsMiner(client)
-	},
-	instanceProfileDetail: func(client *iam.Client) propsCrawler {
-		return newInstanceProfileDetailMiner(client)
 	},
 }
 
-func newPropsCrawler(client *iam.Client, propType string) (propsCrawler, error) {
-	constructor, ok := propsCrawlerConstructors[propType]
-	if !ok {
-		return nil, fmt.Errorf("New props crawler: unknown property type: %s", propType)
-	}
-	return constructor(client), nil
+var groupPropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
+		return newGroupDetailMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newGroupInlinePolicyMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newGroupManagedPolicyMiner(client)
+	},
+}
+
+var policyPropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
+		return newPolicyDetailMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newPolicyVersionsMiner(client)
+	},
+}
+
+var rolePropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
+		return newRoleDetailMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newRoleInlinePolicyMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newRoleManagedPolicyMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newRoleInstanceProfileMiner(client)
+	},
+}
+
+var accountPropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
+		return newAccountPasswordPolicyMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newAccountSummaryMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newAccountAliasMiner(client)
+	},
+}
+
+var ssoProvidersPropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
+		return newSSOOIDCProviderMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newSSOSAMLProviderMiner(client)
+	},
+}
+
+var serverCertificatePropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
+		return newServerCertificateDetailMiner(client)
+	},
+}
+
+var virtualMFADevicePropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
+		return newVirtualMFADeviceDetailMiner(client)
+	},
+	func(client *iam.Client) utils.PropsCrawler {
+		return newVirtualMFADeviceTagsMiner(client)
+	},
+}
+
+var instanceProfilePropsCrawlerConstructors = []utils.PropsCrawlerConstructor{
+	func(client *iam.Client) utils.PropsCrawler {
+		return newInstanceProfileDetailMiner(client)
+	},
 }

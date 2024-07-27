@@ -19,58 +19,39 @@ type userResource struct {
 	client *iam.Client
 }
 
-func newUserResource(client *iam.Client) crawler {
+func newUserResource(client *iam.Client) utils.Crawler {
 	resource := userResource{
 		client: client,
 	}
 	return &resource
 }
 
-func (u *userResource) fetchConf(input any) error {
+func (u *userResource) FetchConf(input any) error {
 	return nil
 }
 
-func (u *userResource) generate(datum cacheInfo) (shared.MinerResource, error) {
-	resource := shared.MinerResource{
-		Identifier: fmt.Sprintf("User_%s", datum.id),
-	}
-
-	for _, prop := range miningUserProps {
-		log.Printf("user property: %s\n", prop)
-
-		userPropsCrawler, err := newPropsCrawler(u.client, prop)
-		if err != nil {
-			return resource, fmt.Errorf("generate userResource: %w", err)
-		}
-		userProps, err := userPropsCrawler.generate(datum)
-		if err != nil {
-			var configErr *mmIAMError
-			if errors.As(err, &configErr) {
-				log.Printf("No %s configuration found", prop)
-			} else {
-				return resource, fmt.Errorf("generate userResource: %w", err)
-			}
-		} else {
-			resource.Properties = append(resource.Properties, userProps...)
-		}
-	}
-
-	return resource, nil
+func (u *userResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
+	identifier := fmt.Sprintf("User_%s", datum.Id)
+	return utils.GetProperties(u.client, identifier, datum, userPropsCrawlerConstructors)
 }
 
 // user detail (GetUser)
 type userDetailMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetUserOutput
 }
 
 func newUserDetailMiner(client *iam.Client) *userDetailMiner {
 	return &userDetailMiner{
-		client: client,
+		propertyType: userDetail,
+		client:       client,
 	}
 }
 
-func (ud *userDetailMiner) fetchConf(input any) error {
+func (ud *userDetailMiner) PropertyType() string { return ud.propertyType }
+
+func (ud *userDetailMiner) FetchConf(input any) error {
 	userDetailInput, ok := input.(*iam.GetUserInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: GetUserInput type assertion failed")
@@ -85,10 +66,10 @@ func (ud *userDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ud *userDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (ud *userDetailMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ud.fetchConf(&iam.GetUserInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := ud.FetchConf(&iam.GetUserInput{UserName: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generateUserDetail: %w", err)
 	}
 
@@ -112,17 +93,21 @@ func (ud *userDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, er
 
 // user login profile (GetLoginProfile)
 type userLoginProfileMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetLoginProfileOutput
 }
 
 func newUserLoginProfileMiner(client *iam.Client) *userLoginProfileMiner {
 	return &userLoginProfileMiner{
-		client: client,
+		propertyType: userLoginProfile,
+		client:       client,
 	}
 }
 
-func (ulp *userLoginProfileMiner) fetchConf(input any) error {
+func (ulp *userLoginProfileMiner) PropertyType() string { return ulp.propertyType }
+
+func (ulp *userLoginProfileMiner) FetchConf(input any) error {
 	loginProfileInput, ok := input.(*iam.GetLoginProfileInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: GetLoginProfileInput type assertion failed")
@@ -146,10 +131,10 @@ func (ulp *userLoginProfileMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ulp *userLoginProfileMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (ulp *userLoginProfileMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ulp.fetchConf(&iam.GetLoginProfileInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := ulp.FetchConf(&iam.GetLoginProfileInput{UserName: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate userLoginProfile: %w", err)
 	}
 
@@ -173,17 +158,21 @@ func (ulp *userLoginProfileMiner) generate(datum cacheInfo) ([]shared.MinerPrope
 
 // user accesskey (NewListAccessKeysPaginator)
 type userAccessKeyMiner struct {
-	client    *iam.Client
-	paginator *iam.ListAccessKeysPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListAccessKeysPaginator
 }
 
 func newUserAccessKeyMiner(client *iam.Client) *userAccessKeyMiner {
 	return &userAccessKeyMiner{
-		client: client,
+		propertyType: userAccessKey,
+		client:       client,
 	}
 }
 
-func (uak *userAccessKeyMiner) fetchConf(input any) error {
+func (uak *userAccessKeyMiner) PropertyType() string { return uak.propertyType }
+
+func (uak *userAccessKeyMiner) FetchConf(input any) error {
 	listAccessKeysInput, ok := input.(*iam.ListAccessKeysInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListAccessKeysInput type assertion failed")
@@ -193,10 +182,10 @@ func (uak *userAccessKeyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (uak *userAccessKeyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (uak *userAccessKeyMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := uak.fetchConf(&iam.ListAccessKeysInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := uak.FetchConf(&iam.ListAccessKeysInput{UserName: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate userAccessKey: %w", err)
 	}
 
@@ -229,17 +218,21 @@ func (uak *userAccessKeyMiner) generate(datum cacheInfo) ([]shared.MinerProperty
 
 // user MFA device (NewListMFADevicesPaginator)
 type userMFADeviceMiner struct {
-	client    *iam.Client
-	paginator *iam.ListMFADevicesPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListMFADevicesPaginator
 }
 
 func newUserMFADeviceMiner(client *iam.Client) *userMFADeviceMiner {
 	return &userMFADeviceMiner{
-		client: client,
+		propertyType: userMFADevice,
+		client:       client,
 	}
 }
 
-func (umd *userMFADeviceMiner) fetchConf(input any) error {
+func (umd *userMFADeviceMiner) PropertyType() string { return umd.propertyType }
+
+func (umd *userMFADeviceMiner) FetchConf(input any) error {
 	listMFADevicesInput, ok := input.(*iam.ListMFADevicesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListMFADevicesInput type assertion failed")
@@ -249,10 +242,10 @@ func (umd *userMFADeviceMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (umd *userMFADeviceMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (umd *userMFADeviceMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := umd.fetchConf(&iam.ListMFADevicesInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := umd.FetchConf(&iam.ListMFADevicesInput{UserName: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate userMFADevice: %w", err)
 	}
 
@@ -308,17 +301,21 @@ func (umd *userMFADeviceMiner) generate(datum cacheInfo) ([]shared.MinerProperty
 
 // user SSH public key (NewListSSHPublicKeysPaginator)
 type userSSHPublicKeyMiner struct {
-	client    *iam.Client
-	paginator *iam.ListSSHPublicKeysPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListSSHPublicKeysPaginator
 }
 
 func newUserSSHPublicKeyMiner(client *iam.Client) *userSSHPublicKeyMiner {
 	return &userSSHPublicKeyMiner{
-		client: client,
+		propertyType: userSSHPublicKey,
+		client:       client,
 	}
 }
 
-func (uspk *userSSHPublicKeyMiner) fetchConf(input any) error {
+func (uspk *userSSHPublicKeyMiner) PropertyType() string { return uspk.propertyType }
+
+func (uspk *userSSHPublicKeyMiner) FetchConf(input any) error {
 	sshPulicKeyInput, ok := input.(*iam.ListSSHPublicKeysInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListSSHPublicKeysInput type assertion failed")
@@ -328,10 +325,10 @@ func (uspk *userSSHPublicKeyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (uspk *userSSHPublicKeyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (uspk *userSSHPublicKeyMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := uspk.fetchConf(&iam.ListSSHPublicKeysInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := uspk.FetchConf(&iam.ListSSHPublicKeysInput{UserName: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate userSSHPublicKey: %w", err)
 	}
 
@@ -347,7 +344,7 @@ func (uspk *userSSHPublicKeyMiner) generate(datum cacheInfo) ([]shared.MinerProp
 				&iam.GetSSHPublicKeyInput{
 					Encoding:       types.EncodingTypePem,
 					SSHPublicKeyId: keyMetadata.SSHPublicKeyId,
-					UserName:       aws.String(datum.name),
+					UserName:       aws.String(datum.Name),
 				},
 			)
 			if err != nil {
@@ -377,17 +374,21 @@ func (uspk *userSSHPublicKeyMiner) generate(datum cacheInfo) ([]shared.MinerProp
 
 // user Service Specific Credential (ListServiceSpecificCredentials)
 type userServiceSpecificCredentialMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.ListServiceSpecificCredentialsOutput
 }
 
 func newUserServiceSpecificCredentialMiner(client *iam.Client) *userServiceSpecificCredentialMiner {
 	return &userServiceSpecificCredentialMiner{
-		client: client,
+		propertyType: userServiceSpecificCredential,
+		client:       client,
 	}
 }
 
-func (ussc *userServiceSpecificCredentialMiner) fetchConf(input any) error {
+func (ussc *userServiceSpecificCredentialMiner) PropertyType() string { return ussc.propertyType }
+
+func (ussc *userServiceSpecificCredentialMiner) FetchConf(input any) error {
 	listServiceSpecificCredentialsInput, ok := input.(*iam.ListServiceSpecificCredentialsInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListServiceSpecificCredentialsInput type assertion failed")
@@ -405,12 +406,12 @@ func (ussc *userServiceSpecificCredentialMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ussc *userServiceSpecificCredentialMiner) generate(
-	datum cacheInfo,
+func (ussc *userServiceSpecificCredentialMiner) Generate(
+	datum utils.CacheInfo,
 ) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ussc.fetchConf(&iam.ListServiceSpecificCredentialsInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := ussc.FetchConf(&iam.ListServiceSpecificCredentialsInput{UserName: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate userServiceSpecificCredential: %w", err)
 	}
 
@@ -436,17 +437,21 @@ func (ussc *userServiceSpecificCredentialMiner) generate(
 
 // user signing certificate (NewListSigningCertificatesPaginator)
 type userSigningCertificateMiner struct {
-	client    *iam.Client
-	paginator *iam.ListSigningCertificatesPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListSigningCertificatesPaginator
 }
 
 func newUserSigningCertificateMiner(client *iam.Client) *userSigningCertificateMiner {
 	return &userSigningCertificateMiner{
-		client: client,
+		propertyType: userSigningCertificate,
+		client:       client,
 	}
 }
 
-func (usc *userSigningCertificateMiner) fetchConf(input any) error {
+func (usc *userSigningCertificateMiner) PropertyType() string { return usc.propertyType }
+
+func (usc *userSigningCertificateMiner) FetchConf(input any) error {
 	listSigningCertificatesInput, ok := input.(*iam.ListSigningCertificatesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListSigningCertificatesInput type assertion failed")
@@ -459,10 +464,12 @@ func (usc *userSigningCertificateMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (usc *userSigningCertificateMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (usc *userSigningCertificateMiner) Generate(
+	datum utils.CacheInfo,
+) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := usc.fetchConf(&iam.ListSigningCertificatesInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := usc.FetchConf(&iam.ListSigningCertificatesInput{UserName: aws.String(datum.Name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate userSigningCertificate: %w", err)
 	}
 
@@ -500,6 +507,7 @@ func (usc *userSigningCertificateMiner) generate(datum cacheInfo) ([]shared.Mine
 // user inline policy
 // Including information about the user's inline policies
 type userInlinePolicyMiner struct {
+	propertyType  string
 	client        *iam.Client
 	paginator     *iam.ListUserPoliciesPaginator
 	configuration *iam.GetUserPolicyOutput
@@ -507,11 +515,14 @@ type userInlinePolicyMiner struct {
 
 func newUserInlinePolicyMiner(client *iam.Client) *userInlinePolicyMiner {
 	return &userInlinePolicyMiner{
-		client: client,
+		propertyType: userInlinePolicy,
+		client:       client,
 	}
 }
 
-func (uip *userInlinePolicyMiner) fetchConf(input any) error {
+func (uip *userInlinePolicyMiner) PropertyType() string { return uip.propertyType }
+
+func (uip *userInlinePolicyMiner) FetchConf(input any) error {
 	userInlinePolicyInput, ok := input.(*iam.ListUserPoliciesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListUserPoliciesInput type assertion failed")
@@ -521,10 +532,10 @@ func (uip *userInlinePolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (uip *userInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (uip *userInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := uip.fetchConf(&iam.ListUserPoliciesInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := uip.FetchConf(&iam.ListUserPoliciesInput{UserName: aws.String(datum.Name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate userInlinePolicy: %w", err)
 	}
 
@@ -539,7 +550,7 @@ func (uip *userInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerPrope
 				context.Background(),
 				&iam.GetUserPolicyInput{
 					PolicyName: aws.String(policyName),
-					UserName:   aws.String(datum.name),
+					UserName:   aws.String(datum.Name),
 				},
 			)
 			if err != nil {
@@ -578,17 +589,21 @@ func (uip *userInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerPrope
 // user managed policy
 // Including information about the user's managed policies
 type userManagedPolicyMiner struct {
-	client    *iam.Client
-	paginator *iam.ListAttachedUserPoliciesPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListAttachedUserPoliciesPaginator
 }
 
 func newUserManagedPolicyMiner(client *iam.Client) *userManagedPolicyMiner {
 	return &userManagedPolicyMiner{
-		client: client,
+		propertyType: userManagedPolicy,
+		client:       client,
 	}
 }
 
-func (ump *userManagedPolicyMiner) fetchConf(input any) error {
+func (ump *userManagedPolicyMiner) PropertyType() string { return ump.propertyType }
+
+func (ump *userManagedPolicyMiner) FetchConf(input any) error {
 	userManagedPolicyInput, ok := input.(*iam.ListAttachedUserPoliciesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListAttachedUserPoliciesInput type assertion failed")
@@ -598,10 +613,10 @@ func (ump *userManagedPolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ump *userManagedPolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (ump *userManagedPolicyMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ump.fetchConf(&iam.ListAttachedUserPoliciesInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := ump.FetchConf(&iam.ListAttachedUserPoliciesInput{UserName: aws.String(datum.Name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate userManagedPolicy: %w", err)
 	}
 
@@ -634,17 +649,21 @@ func (ump *userManagedPolicyMiner) generate(datum cacheInfo) ([]shared.MinerProp
 
 // user belongs groups
 type userGroupsMiner struct {
-	client    *iam.Client
-	paginator *iam.ListGroupsForUserPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListGroupsForUserPaginator
 }
 
 func newUserGroupsMiner(client *iam.Client) *userGroupsMiner {
 	return &userGroupsMiner{
-		client: client,
+		propertyType: userGroups,
+		client:       client,
 	}
 }
 
-func (ug *userGroupsMiner) fetchConf(input any) error {
+func (ug *userGroupsMiner) PropertyType() string { return ug.propertyType }
+
+func (ug *userGroupsMiner) FetchConf(input any) error {
 	userGroupsInput, ok := input.(*iam.ListGroupsForUserInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListGroupsForUserInput type assertion failed")
@@ -654,10 +673,10 @@ func (ug *userGroupsMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ug *userGroupsMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (ug *userGroupsMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ug.fetchConf(&iam.ListGroupsForUserInput{UserName: aws.String(datum.name)}); err != nil {
+	if err := ug.FetchConf(&iam.ListGroupsForUserInput{UserName: aws.String(datum.Name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate userGroups: %w", err)
 	}
 

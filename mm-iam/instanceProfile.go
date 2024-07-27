@@ -2,76 +2,51 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/liuminhaw/mist-miner/shared"
+	"github.com/liuminhaw/mm-plugins/utils"
 )
 
 type instanceProfileResource struct {
 	client *iam.Client
 }
 
-func newInstanceProfileResource(client *iam.Client) crawler {
+func newInstanceProfileResource(client *iam.Client) utils.Crawler {
 	resource := instanceProfileResource{
 		client: client,
 	}
 	return &resource
 }
 
-func (i *instanceProfileResource) fetchConf(input any) error {
+func (i *instanceProfileResource) FetchConf(input any) error {
 	return nil
 }
 
-func (i *instanceProfileResource) generate(datum cacheInfo) (shared.MinerResource, error) {
-	resource := shared.MinerResource{
-		Identifier: fmt.Sprintf("InstanceProfile_%s", datum.id),
-	}
-
-	for _, prop := range miningInstanceProfileProps {
-		log.Printf("instanceProfile property: %s\n", prop)
-
-		instanceProfilePropsCrawler, err := newPropsCrawler(i.client, prop)
-		if err != nil {
-			return shared.MinerResource{}, fmt.Errorf("generate instanceProfileResource: %w", err)
-		}
-		instanceProfileProps, err := instanceProfilePropsCrawler.generate(datum)
-		if err != nil {
-			var configErr *mmIAMError
-			if errors.As(err, &configErr) {
-				log.Printf("No %s configuration found", prop)
-			} else {
-				return resource, fmt.Errorf("generate roleResource: %w", err)
-			}
-		} else {
-			resource.Properties = append(resource.Properties, instanceProfileProps...)
-		}
-	}
-
-	// Check if there are any properties
-	if resource.Properties == nil || len(resource.Properties) == 0 {
-		return shared.MinerResource{}, &mmIAMError{"InstanceProfile", noProps}
-	}
-
-	return resource, nil
+func (i *instanceProfileResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
+	Identifier := fmt.Sprintf("InstanceProfile_%s", datum.Id)
+	return utils.GetProperties(i.client, Identifier, datum, instanceProfilePropsCrawlerConstructors)
 }
 
 // instanceProfile detail
 type instanceProfileDetailMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetInstanceProfileOutput
 }
 
-func newInstanceProfileDetailMiner(client *iam.Client) propsCrawler {
+func newInstanceProfileDetailMiner(client *iam.Client) *instanceProfileDetailMiner {
 	return &instanceProfileDetailMiner{
-		client: client,
+		propertyType: instanceProfileDetail,
+		client:       client,
 	}
 }
 
-func (ipd *instanceProfileDetailMiner) fetchConf(input any) error {
+func (ipd *instanceProfileDetailMiner) PropertyType() string { return ipd.propertyType }
+
+func (ipd *instanceProfileDetailMiner) FetchConf(input any) error {
 	instanceProfileInput, ok := input.(*iam.GetInstanceProfileInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: GetInstanceProfileInput type assertion failed")
@@ -89,10 +64,12 @@ func (ipd *instanceProfileDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (ipd *instanceProfileDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (ipd *instanceProfileDetailMiner) Generate(
+	datum utils.CacheInfo,
+) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := ipd.fetchConf(&iam.GetInstanceProfileInput{InstanceProfileName: aws.String(datum.name)}); err != nil {
+	if err := ipd.FetchConf(&iam.GetInstanceProfileInput{InstanceProfileName: aws.String(datum.Name)}); err != nil {
 		return nil, fmt.Errorf("generate instanceProfileDetail: %w", err)
 	}
 

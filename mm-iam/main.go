@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/liuminhaw/mist-miner/shared"
 	iamContext "github.com/liuminhaw/mm-plugins/mm-iam/context"
+	"github.com/liuminhaw/mm-plugins/utils"
 )
 
 var PLUG_NAME = "mm-iam"
@@ -130,24 +131,24 @@ func mineResources(
 
 	// Create a temporary dataCache if data is nil
 	if data.resource == "" && (len(data.caches) == 0 || data.caches == nil) {
-		emptyCache := cacheInfo{name: "", id: ""}
-		data = dataCache{resource: resourceType, caches: []cacheInfo{emptyCache}}
+		emptyCache := utils.CacheInfo{Name: "", Id: ""}
+		data = dataCache{resource: resourceType, caches: []utils.CacheInfo{emptyCache}}
 	}
 
 	for _, cache := range data.caches {
-		if cache.name == "" {
+		if cache.Name == "" {
 			log.Printf("Get %s", data.resource)
 		} else {
-			log.Printf("Get %s: %s", data.resource, cache.name)
+			log.Printf("Get %s: %s", data.resource, cache.Name)
 		}
 
-		resourceCrawler, err := NewCrawler(ctx, client, resourceType)
+		resourceCrawler, err := utils.NewCrawler(ctx, client, resourceType, crawlerConstructors)
 		if err != nil {
 			return shared.MinerResources{}, fmt.Errorf(
 				"mineResources: failed to create new crawler: %w", err,
 			)
 		}
-		resource, err := resourceCrawler.generate(cache)
+		resource, err := resourceCrawler.Generate(cache)
 		if err != nil {
 			var configErr *mmIAMError
 			if errors.As(err, &configErr) {

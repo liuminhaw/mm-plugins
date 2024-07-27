@@ -10,18 +10,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/liuminhaw/mist-miner/shared"
 	iamContext "github.com/liuminhaw/mm-plugins/mm-iam/context"
-	"github.com/liuminhaw/mm-plugins/mm-iam/utils"
+	"github.com/liuminhaw/mm-plugins/utils"
 )
-
-type cacheInfo struct {
-	name    string
-	id      string
-	content string
-}
 
 type dataCache struct {
 	resource string
-	caches   []cacheInfo
+	caches   []utils.CacheInfo
 }
 
 type caching struct {
@@ -35,12 +29,12 @@ type caching struct {
 
 func newCaching() *caching {
 	return &caching{
-		users:            dataCache{resource: iamUser, caches: []cacheInfo{}},
-		groups:           dataCache{resource: iamGroup, caches: []cacheInfo{}},
-		policies:         dataCache{resource: iamPolicy, caches: []cacheInfo{}},
-		roles:            dataCache{resource: iamRole, caches: []cacheInfo{}},
-		virtualMFAs:      dataCache{resource: iamVirtualMFADevice, caches: []cacheInfo{}},
-		instanceProfiles: dataCache{resource: iamInstanceProfile, caches: []cacheInfo{}},
+		users:            dataCache{resource: iamUser, caches: []utils.CacheInfo{}},
+		groups:           dataCache{resource: iamGroup, caches: []utils.CacheInfo{}},
+		policies:         dataCache{resource: iamPolicy, caches: []utils.CacheInfo{}},
+		roles:            dataCache{resource: iamRole, caches: []utils.CacheInfo{}},
+		virtualMFAs:      dataCache{resource: iamVirtualMFADevice, caches: []utils.CacheInfo{}},
+		instanceProfiles: dataCache{resource: iamInstanceProfile, caches: []utils.CacheInfo{}},
 	}
 }
 
@@ -77,9 +71,9 @@ func (c *caching) readUsers(client *iam.Client) error {
 		}
 
 		for _, user := range page.Users {
-			c.users.caches = append(c.users.caches, cacheInfo{
-				name: aws.ToString(user.UserName),
-				id:   aws.ToString(user.UserId),
+			c.users.caches = append(c.users.caches, utils.CacheInfo{
+				Name: aws.ToString(user.UserName),
+				Id:   aws.ToString(user.UserId),
 			})
 		}
 	}
@@ -97,9 +91,9 @@ func (c *caching) readGroups(client *iam.Client) error {
 		}
 
 		for _, group := range page.Groups {
-			c.groups.caches = append(c.groups.caches, cacheInfo{
-				name: aws.ToString(group.GroupName),
-				id:   aws.ToString(group.GroupId),
+			c.groups.caches = append(c.groups.caches, utils.CacheInfo{
+				Name: aws.ToString(group.GroupName),
+				Id:   aws.ToString(group.GroupId),
 			})
 		}
 	}
@@ -130,9 +124,9 @@ func (c *caching) readPolicies(ctx context.Context, client *iam.Client) error {
 		}
 
 		for _, policy := range page.Policies {
-			c.policies.caches = append(c.policies.caches, cacheInfo{
-				name: aws.ToString(policy.Arn),
-				id:   aws.ToString(policy.PolicyId),
+			c.policies.caches = append(c.policies.caches, utils.CacheInfo{
+				Name: aws.ToString(policy.Arn),
+				Id:   aws.ToString(policy.PolicyId),
 			})
 		}
 	}
@@ -150,9 +144,9 @@ func (c *caching) readRoles(client *iam.Client) error {
 		}
 
 		for _, role := range page.Roles {
-			c.roles.caches = append(c.roles.caches, cacheInfo{
-				name: aws.ToString(role.RoleName),
-				id:   aws.ToString(role.RoleId),
+			c.roles.caches = append(c.roles.caches, utils.CacheInfo{
+				Name: aws.ToString(role.RoleName),
+				Id:   aws.ToString(role.RoleId),
 			})
 		}
 	}
@@ -193,10 +187,10 @@ func (c *caching) readVirtualMFAs(ctx context.Context, client *iam.Client) error
 				return fmt.Errorf("caching readVirtualMFAs: %w", err)
 			}
 
-			c.virtualMFAs.caches = append(c.virtualMFAs.caches, cacheInfo{
-				name:    aws.ToString(device.SerialNumber),
-				id:      aws.ToString(device.SerialNumber),
-				content: string(normalizedDevice),
+			c.virtualMFAs.caches = append(c.virtualMFAs.caches, utils.CacheInfo{
+				Name:    aws.ToString(device.SerialNumber),
+				Id:      aws.ToString(device.SerialNumber),
+				Content: string(normalizedDevice),
 			})
 		}
 	}
@@ -214,9 +208,9 @@ func (c *caching) readInstanceProfiles(client *iam.Client) error {
 		}
 
 		for _, profile := range page.InstanceProfiles {
-			c.instanceProfiles.caches = append(c.instanceProfiles.caches, cacheInfo{
-				name: aws.ToString(profile.InstanceProfileName),
-				id:   aws.ToString(profile.InstanceProfileId),
+			c.instanceProfiles.caches = append(c.instanceProfiles.caches, utils.CacheInfo{
+				Name: aws.ToString(profile.InstanceProfileName),
+				Id:   aws.ToString(profile.InstanceProfileId),
 			})
 		}
 	}

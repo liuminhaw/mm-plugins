@@ -81,19 +81,6 @@ var miningResources = []string{
 	iamInstanceProfile,
 }
 
-var miningUserProps = []string{
-	userDetail,
-	userLoginProfile,
-	userAccessKey,
-	userGroups,
-	userInlinePolicy,
-	userManagedPolicy,
-	userMFADevice,
-	userSSHPublicKey,
-	userServiceSpecificCredential,
-	userSigningCertificate,
-}
-
 var miningGroupProps = []string{
 	groupDetail,
 	groupInlinePolicy,

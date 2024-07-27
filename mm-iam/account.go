@@ -2,71 +2,50 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/liuminhaw/mist-miner/shared"
+	"github.com/liuminhaw/mm-plugins/utils"
 )
 
 type accountResource struct {
 	client *iam.Client
 }
 
-func newAccountResource(client *iam.Client) crawler {
+func newAccountResource(client *iam.Client) utils.Crawler {
 	resource := accountResource{
 		client: client,
 	}
 	return &resource
 }
 
-func (a *accountResource) fetchConf(input any) error {
+func (a *accountResource) FetchConf(input any) error {
 	return nil
 }
 
-func (a *accountResource) generate(dummy cacheInfo) (shared.MinerResource, error) {
-	resource := shared.MinerResource{
-		Identifier: "Account",
-	}
-
-	for _, prop := range miningAccountProps {
-		log.Printf("account property: %s\n", prop)
-
-		accountPropsCrawler, err := newPropsCrawler(a.client, prop)
-		if err != nil {
-			return shared.MinerResource{}, fmt.Errorf("generate accountResource: %w", err)
-		}
-		accountProps, err := accountPropsCrawler.generate(dummy)
-		if err != nil {
-			var configErr *mmIAMError
-			if errors.As(err, &configErr) {
-				log.Printf("No %s configuration found", prop)
-			} else {
-				return shared.MinerResource{}, fmt.Errorf("generate accountResource: %w", err)
-			}
-		} else {
-			resource.Properties = append(resource.Properties, accountProps...)
-		}
-	}
-
-	return resource, nil
+func (a *accountResource) Generate(dummy utils.CacheInfo) (shared.MinerResource, error) {
+	return utils.GetProperties(a.client, "Account", dummy, accountPropsCrawlerConstructors)
 }
 
 // Account password policy
 type accountPasswordPolicyMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetAccountPasswordPolicyOutput
 }
 
 func newAccountPasswordPolicyMiner(client *iam.Client) *accountPasswordPolicyMiner {
 	resource := accountPasswordPolicyMiner{
-		client: client,
+		propertyType: accountPasswordPolicy,
+		client:       client,
 	}
 	return &resource
 }
 
-func (pp *accountPasswordPolicyMiner) fetchConf(input any) error {
+func (pp *accountPasswordPolicyMiner) PropertyType() string { return pp.propertyType }
+
+func (pp *accountPasswordPolicyMiner) FetchConf(input any) error {
 	var err error
 	pp.configuration, err = pp.client.GetAccountPasswordPolicy(
 		context.Background(),
@@ -79,10 +58,12 @@ func (pp *accountPasswordPolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (pp *accountPasswordPolicyMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
+func (pp *accountPasswordPolicyMiner) Generate(
+	dummy utils.CacheInfo,
+) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := pp.fetchConf(nil); err != nil {
+	if err := pp.FetchConf(nil); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate password policy: %w", err)
 	}
 
@@ -106,18 +87,22 @@ func (pp *accountPasswordPolicyMiner) generate(dummy cacheInfo) ([]shared.MinerP
 
 // Account summary
 type accountSummaryMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetAccountSummaryOutput
 }
 
 func newAccountSummaryMiner(client *iam.Client) *accountSummaryMiner {
 	resource := accountSummaryMiner{
-		client: client,
+		propertyType: accountSummary,
+		client:       client,
 	}
 	return &resource
 }
 
-func (as *accountSummaryMiner) fetchConf(input any) error {
+func (as *accountSummaryMiner) PropertyType() string { return as.propertyType }
+
+func (as *accountSummaryMiner) FetchConf(input any) error {
 	var err error
 	as.configuration, err = as.client.GetAccountSummary(
 		context.Background(),
@@ -130,10 +115,10 @@ func (as *accountSummaryMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (as *accountSummaryMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
+func (as *accountSummaryMiner) Generate(dummy utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := as.fetchConf(nil); err != nil {
+	if err := as.FetchConf(nil); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate account summary: %w", err)
 	}
 
@@ -157,18 +142,22 @@ func (as *accountSummaryMiner) generate(dummy cacheInfo) ([]shared.MinerProperty
 
 // Account alias
 type accountAliasMiner struct {
-	client    *iam.Client
-	paginator *iam.ListAccountAliasesPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListAccountAliasesPaginator
 }
 
 func newAccountAliasMiner(client *iam.Client) *accountAliasMiner {
 	resource := accountAliasMiner{
-		client: client,
+		propertyType: accountAlias,
+		client:       client,
 	}
 	return &resource
 }
 
-func (aa *accountAliasMiner) fetchConf(input any) error {
+func (aa *accountAliasMiner) PropertyType() string { return aa.propertyType }
+
+func (aa *accountAliasMiner) FetchConf(input any) error {
 	accountAliasInput, ok := input.(*iam.ListAccountAliasesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListAccountAliasesInput type assertion failed")
@@ -178,10 +167,10 @@ func (aa *accountAliasMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (aa *accountAliasMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
+func (aa *accountAliasMiner) Generate(dummy utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := aa.fetchConf(&iam.ListAccountAliasesInput{}); err != nil {
+	if err := aa.FetchConf(&iam.ListAccountAliasesInput{}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate account alias: %w", err)
 	}
 

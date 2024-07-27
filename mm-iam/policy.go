@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -16,58 +14,39 @@ type policyResource struct {
 	client *iam.Client
 }
 
-func newPolicyResource(client *iam.Client) crawler {
+func newPolicyResource(client *iam.Client) utils.Crawler {
 	resource := policyResource{
 		client: client,
 	}
 	return &resource
 }
 
-func (p *policyResource) fetchConf(input any) error {
+func (p *policyResource) FetchConf(input any) error {
 	return nil
 }
 
-func (p *policyResource) generate(datum cacheInfo) (shared.MinerResource, error) {
-	resource := shared.MinerResource{
-		Identifier: fmt.Sprintf("Policy_%s", datum.id),
-	}
-
-	for _, prop := range miningPolicyProps {
-		log.Printf("policy property: %s\n", prop)
-
-		policyPropsCrawler, err := newPropsCrawler(p.client, prop)
-		if err != nil {
-			return resource, fmt.Errorf("generate policyResource: %w", err)
-		}
-		policyProps, err := policyPropsCrawler.generate(datum)
-		if err != nil {
-			var configErr *mmIAMError
-			if errors.As(err, &configErr) {
-				log.Printf("No %s configuration found", prop)
-			} else {
-				return resource, fmt.Errorf("generate policyResource: %w", err)
-			}
-		} else {
-			resource.Properties = append(resource.Properties, policyProps...)
-		}
-	}
-
-	return resource, nil
+func (p *policyResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
+	identifier := fmt.Sprintf("Policy_%s", datum.Id)
+	return utils.GetProperties(p.client, identifier, datum, policyPropsCrawlerConstructors)
 }
 
 // policy detail
 type policyDetailMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetPolicyOutput
 }
 
-func newPolicyDetailMiner(client *iam.Client) propsCrawler {
+func newPolicyDetailMiner(client *iam.Client) *policyDetailMiner {
 	return &policyDetailMiner{
-		client: client,
+		propertyType: policyDetail,
+		client:       client,
 	}
 }
 
-func (pd *policyDetailMiner) fetchConf(input any) error {
+func (pd *policyDetailMiner) PropertyType() string { return pd.propertyType }
+
+func (pd *policyDetailMiner) FetchConf(input any) error {
 	policyDetailInput, ok := input.(*iam.GetPolicyInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: GetPolicyInput type assertion failed")
@@ -82,10 +61,10 @@ func (pd *policyDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (pd *policyDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (pd *policyDetailMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := pd.fetchConf(&iam.GetPolicyInput{PolicyArn: aws.String(datum.name)}); err != nil {
+	if err := pd.FetchConf(&iam.GetPolicyInput{PolicyArn: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate policyDetail: %w", err)
 	}
 
@@ -109,18 +88,22 @@ func (pd *policyDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, 
 
 // policy versions
 type policyVersionsMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetPolicyVersionOutput
 	paginator     *iam.ListPolicyVersionsPaginator
 }
 
-func newPolicyVersionsMiner(client *iam.Client) propsCrawler {
+func newPolicyVersionsMiner(client *iam.Client) *policyVersionsMiner {
 	return &policyVersionsMiner{
-		client: client,
+		propertyType: policyVersions,
+		client:       client,
 	}
 }
 
-func (pv *policyVersionsMiner) fetchConf(input any) error {
+func (pv *policyVersionsMiner) PropertyType() string { return pv.propertyType }
+
+func (pv *policyVersionsMiner) FetchConf(input any) error {
 	policyVersionsInput, ok := input.(*iam.ListPolicyVersionsInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListPolicyVersionsInput type assertion failed")
@@ -130,10 +113,10 @@ func (pv *policyVersionsMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (pv *policyVersionsMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (pv *policyVersionsMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := pv.fetchConf(&iam.ListPolicyVersionsInput{PolicyArn: aws.String(datum.name)}); err != nil {
+	if err := pv.FetchConf(&iam.ListPolicyVersionsInput{PolicyArn: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate policyVersions: %w", err)
 	}
 
@@ -147,7 +130,7 @@ func (pv *policyVersionsMiner) generate(datum cacheInfo) ([]shared.MinerProperty
 			pv.configuration, err = pv.client.GetPolicyVersion(
 				context.Background(),
 				&iam.GetPolicyVersionInput{
-					PolicyArn: aws.String(datum.name),
+					PolicyArn: aws.String(datum.Name),
 					VersionId: version.VersionId,
 				},
 			)

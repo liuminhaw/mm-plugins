@@ -2,65 +2,41 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/liuminhaw/mist-miner/shared"
+	"github.com/liuminhaw/mm-plugins/utils"
 )
 
 type ssoProvidersResource struct {
 	client *iam.Client
 }
 
-func newSSOProvidersResource(client *iam.Client) crawler {
+func newSSOProvidersResource(client *iam.Client) utils.Crawler {
 	resource := ssoProvidersResource{
 		client: client,
 	}
 	return &resource
 }
 
-func (s *ssoProvidersResource) fetchConf(input any) error {
+func (s *ssoProvidersResource) FetchConf(input any) error {
 	return nil
 }
 
-func (s *ssoProvidersResource) generate(dummy cacheInfo) (shared.MinerResource, error) {
-	resource := shared.MinerResource{
-		Identifier: "SSOProviders",
-	}
-
-	for _, prop := range miningSSOProps {
-		log.Printf("SSOProviders property: %s\n", prop)
-
-		ssoPropsCrawler, err := newPropsCrawler(s.client, prop)
-		if err != nil {
-			return shared.MinerResource{}, fmt.Errorf("generate ssoResource: %w", err)
-		}
-		ssoProps, err := ssoPropsCrawler.generate(dummy)
-		if err != nil {
-			var configErr *mmIAMError
-			if errors.As(err, &configErr) {
-				log.Printf("No %s configuration found", prop)
-			} else {
-				return shared.MinerResource{}, fmt.Errorf("generate ssoResource: %w", err)
-			}
-		} else {
-			resource.Properties = append(resource.Properties, ssoProps...)
-		}
-	}
-
-	// Check if there are any properties
-	if resource.Properties == nil || len(resource.Properties) == 0 {
-		return shared.MinerResource{}, &mmIAMError{"SSOProviders", noProps}
-	}
-
-	return resource, nil
+func (s *ssoProvidersResource) Generate(dummy utils.CacheInfo) (shared.MinerResource, error) {
+	return utils.GetProperties(
+		s.client,
+		"SSOProviders",
+		dummy,
+		ssoProvidersPropsCrawlerConstructors,
+	)
 }
 
 // SSO OpenIDConnect provider
 type ssoOIDCProviderMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetOpenIDConnectProviderOutput
 	overview      *iam.ListOpenIDConnectProvidersOutput
@@ -68,11 +44,14 @@ type ssoOIDCProviderMiner struct {
 
 func newSSOOIDCProviderMiner(client *iam.Client) *ssoOIDCProviderMiner {
 	return &ssoOIDCProviderMiner{
-		client: client,
+		propertyType: ssoOIDCProvider,
+		client:       client,
 	}
 }
 
-func (op *ssoOIDCProviderMiner) fetchConf(input any) error {
+func (op *ssoOIDCProviderMiner) PropertyType() string { return op.propertyType }
+
+func (op *ssoOIDCProviderMiner) FetchConf(input any) error {
 	var err error
 	op.overview, err = op.client.ListOpenIDConnectProviders(
 		context.Background(),
@@ -85,10 +64,10 @@ func (op *ssoOIDCProviderMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (op *ssoOIDCProviderMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
+func (op *ssoOIDCProviderMiner) Generate(dummy utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := op.fetchConf(""); err != nil {
+	if err := op.FetchConf(""); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate SSO OIDC provider: %w", err)
 	}
 
@@ -124,6 +103,7 @@ func (op *ssoOIDCProviderMiner) generate(dummy cacheInfo) ([]shared.MinerPropert
 
 // SSO SAML provider
 type ssoSAMLProviderMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetSAMLProviderOutput
 	overview      *iam.ListSAMLProvidersOutput
@@ -131,11 +111,14 @@ type ssoSAMLProviderMiner struct {
 
 func newSSOSAMLProviderMiner(client *iam.Client) *ssoSAMLProviderMiner {
 	return &ssoSAMLProviderMiner{
-		client: client,
+		propertyType: ssoSAMLProvider,
+		client:       client,
 	}
 }
 
-func (sp *ssoSAMLProviderMiner) fetchConf(input any) error {
+func (sp *ssoSAMLProviderMiner) PropertyType() string { return sp.propertyType }
+
+func (sp *ssoSAMLProviderMiner) FetchConf(input any) error {
 	var err error
 	sp.overview, err = sp.client.ListSAMLProviders(
 		context.Background(),
@@ -148,10 +131,10 @@ func (sp *ssoSAMLProviderMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (sp *ssoSAMLProviderMiner) generate(dummy cacheInfo) ([]shared.MinerProperty, error) {
+func (sp *ssoSAMLProviderMiner) Generate(dummy utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := sp.fetchConf(""); err != nil {
+	if err := sp.FetchConf(""); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate SSO SAML provider: %w", err)
 	}
 

@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -16,59 +14,40 @@ type groupResource struct {
 	client *iam.Client
 }
 
-func newGroupResource(client *iam.Client) crawler {
+func newGroupResource(client *iam.Client) utils.Crawler {
 	resource := groupResource{
 		client: client,
 	}
 	return &resource
 }
 
-func (g *groupResource) fetchConf(input any) error {
+func (g *groupResource) FetchConf(input any) error {
 	return nil
 }
 
-func (g *groupResource) generate(datum cacheInfo) (shared.MinerResource, error) {
-	resource := shared.MinerResource{
-		Identifier: fmt.Sprintf("Group_%s", datum.id),
-	}
-
-	for _, prop := range miningGroupProps {
-		log.Printf("group property: %s\n", prop)
-
-		groupPropsCrawler, err := newPropsCrawler(g.client, prop)
-		if err != nil {
-			return resource, fmt.Errorf("generate groupResource: %w", err)
-		}
-		groupProps, err := groupPropsCrawler.generate(datum)
-		if err != nil {
-			var configErr *mmIAMError
-			if errors.As(err, &configErr) {
-				log.Printf("No %s configuration found", prop)
-			} else {
-				return resource, fmt.Errorf("generate groupResource: %w", err)
-			}
-		} else {
-			resource.Properties = append(resource.Properties, groupProps...)
-		}
-	}
-
-	return resource, nil
+func (g *groupResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
+	identifier := fmt.Sprintf("Group_%s", datum.Id)
+	return utils.GetProperties(g.client, identifier, datum, groupPropsCrawlerConstructors)
 }
 
 // group detail
 // Including information about the group and its users
 type groupDetailMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetGroupOutput
 }
 
 func newGroupDetailMiner(client *iam.Client) *groupDetailMiner {
 	return &groupDetailMiner{
-		client: client,
+		propertyType: groupDetail,
+		client:       client,
 	}
 }
 
-func (gd *groupDetailMiner) fetchConf(input any) error {
+func (gd *groupDetailMiner) PropertyType() string { return gd.propertyType }
+
+func (gd *groupDetailMiner) FetchConf(input any) error {
 	groupDetailInput, ok := input.(*iam.GetGroupInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: GetGroupInput type assertion failed")
@@ -83,10 +62,10 @@ func (gd *groupDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (gd *groupDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (gd *groupDetailMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := gd.fetchConf(&iam.GetGroupInput{GroupName: aws.String(datum.name)}); err != nil {
+	if err := gd.FetchConf(&iam.GetGroupInput{GroupName: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate groupDetail: %w", err)
 	}
 
@@ -158,6 +137,7 @@ func (gd *groupDetailMiner) groupUserProp() ([]shared.MinerProperty, error) {
 // group inline policy (ListGroupPolicies)
 // Including information about the group's inline policies
 type groupInlinePolicyMiner struct {
+	propertyType  string
 	client        *iam.Client
 	paginator     *iam.ListGroupPoliciesPaginator
 	configuration *iam.GetGroupPolicyOutput
@@ -165,11 +145,14 @@ type groupInlinePolicyMiner struct {
 
 func newGroupInlinePolicyMiner(client *iam.Client) *groupInlinePolicyMiner {
 	return &groupInlinePolicyMiner{
-		client: client,
+		propertyType: groupInlinePolicy,
+		client:       client,
 	}
 }
 
-func (gip *groupInlinePolicyMiner) fetchConf(input any) error {
+func (gip *groupInlinePolicyMiner) PropertyType() string { return gip.propertyType }
+
+func (gip *groupInlinePolicyMiner) FetchConf(input any) error {
 	groupInlinePolicyInput, ok := input.(*iam.ListGroupPoliciesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListGroupPoliciesInput type assertion failed")
@@ -179,10 +162,10 @@ func (gip *groupInlinePolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (gip *groupInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (gip *groupInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := gip.fetchConf(&iam.ListGroupPoliciesInput{GroupName: aws.String(datum.name)}); err != nil {
+	if err := gip.FetchConf(&iam.ListGroupPoliciesInput{GroupName: aws.String(datum.Name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate groupInlinePolicy: %w", err)
 	}
 
@@ -196,7 +179,7 @@ func (gip *groupInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerProp
 			gip.configuration, err = gip.client.GetGroupPolicy(
 				context.Background(),
 				&iam.GetGroupPolicyInput{
-					GroupName:  aws.String(datum.name),
+					GroupName:  aws.String(datum.Name),
 					PolicyName: aws.String(policyName),
 				},
 			)
@@ -236,17 +219,21 @@ func (gip *groupInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerProp
 // group managed policy (ListAttachedGroupPolicies)
 // Including information about the group's attached managed policies
 type groupManagedPolicyMiner struct {
-	client    *iam.Client
-	paginator *iam.ListAttachedGroupPoliciesPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListAttachedGroupPoliciesPaginator
 }
 
 func newGroupManagedPolicyMiner(client *iam.Client) *groupManagedPolicyMiner {
 	return &groupManagedPolicyMiner{
-		client: client,
+		propertyType: groupManagedPolicy,
+		client:       client,
 	}
 }
 
-func (gmp *groupManagedPolicyMiner) fetchConf(input any) error {
+func (gmp *groupManagedPolicyMiner) PropertyType() string { return gmp.propertyType }
+
+func (gmp *groupManagedPolicyMiner) FetchConf(input any) error {
 	groupManagedPolicyInput, ok := input.(*iam.ListAttachedGroupPoliciesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListAttachedGroupPoliciesInput type assertion failed")
@@ -256,10 +243,12 @@ func (gmp *groupManagedPolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (gmp *groupManagedPolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (gmp *groupManagedPolicyMiner) Generate(
+	datum utils.CacheInfo,
+) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := gmp.fetchConf(&iam.ListAttachedGroupPoliciesInput{GroupName: aws.String(datum.name)}); err != nil {
+	if err := gmp.FetchConf(&iam.ListAttachedGroupPoliciesInput{GroupName: aws.String(datum.Name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate groupManagedPolicy: %w", err)
 	}
 

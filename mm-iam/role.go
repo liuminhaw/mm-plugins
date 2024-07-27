@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -16,58 +14,39 @@ type roleResource struct {
 	client *iam.Client
 }
 
-func newRoleResource(client *iam.Client) crawler {
+func newRoleResource(client *iam.Client) utils.Crawler {
 	resource := roleResource{
 		client: client,
 	}
 	return &resource
 }
 
-func (r *roleResource) fetchConf(input any) error {
+func (r *roleResource) FetchConf(input any) error {
 	return nil
 }
 
-func (r *roleResource) generate(datum cacheInfo) (shared.MinerResource, error) {
-	resource := shared.MinerResource{
-		Identifier: fmt.Sprintf("Role_%s", datum.id),
-	}
-
-	for _, prop := range miningRoleProps {
-		log.Printf("role property: %s\n", prop)
-
-		rolePropsCrawler, err := newPropsCrawler(r.client, prop)
-		if err != nil {
-			return resource, fmt.Errorf("generate roleResource: %w", err)
-		}
-		roleProps, err := rolePropsCrawler.generate(datum)
-		if err != nil {
-			var configErr *mmIAMError
-			if errors.As(err, &configErr) {
-				log.Printf("No %s configuration found", prop)
-			} else {
-				return resource, fmt.Errorf("generate roleResource: %w", err)
-			}
-		} else {
-			resource.Properties = append(resource.Properties, roleProps...)
-		}
-	}
-
-	return resource, nil
+func (r *roleResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
+	identifier := fmt.Sprintf("Role_%s", datum.Id)
+	return utils.GetProperties(r.client, identifier, datum, rolePropsCrawlerConstructors)
 }
 
 // role detail (GetRole)
 type roleDetailMiner struct {
+	propertyType  string
 	client        *iam.Client
 	configuration *iam.GetRoleOutput
 }
 
-func newRoleDetailMiner(client *iam.Client) propsCrawler {
+func newRoleDetailMiner(client *iam.Client) *roleDetailMiner {
 	return &roleDetailMiner{
-		client: client,
+		propertyType: roleDetail,
+		client:       client,
 	}
 }
 
-func (rd *roleDetailMiner) fetchConf(input any) error {
+func (rd *roleDetailMiner) PropertyType() string { return rd.propertyType }
+
+func (rd *roleDetailMiner) FetchConf(input any) error {
 	roleDetailInput, ok := input.(*iam.GetRoleInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: GetRoleInput type assertion failed")
@@ -82,10 +61,10 @@ func (rd *roleDetailMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (rd *roleDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (rd *roleDetailMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := rd.fetchConf(&iam.GetRoleInput{RoleName: aws.String(datum.name)}); err != nil {
+	if err := rd.FetchConf(&iam.GetRoleInput{RoleName: aws.String(datum.Name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate roleDetail: %w", err)
 	}
 
@@ -118,18 +97,22 @@ func (rd *roleDetailMiner) generate(datum cacheInfo) ([]shared.MinerProperty, er
 
 // role inline policy (GetRolePolicy)
 type roleInlinePolicyMiner struct {
+	propertyType  string
 	client        *iam.Client
 	paginator     *iam.ListRolePoliciesPaginator
 	configuration *iam.GetRolePolicyOutput
 }
 
-func newRoleInlinePolicyMiner(client *iam.Client) propsCrawler {
+func newRoleInlinePolicyMiner(client *iam.Client) *roleInlinePolicyMiner {
 	return &roleInlinePolicyMiner{
-		client: client,
+		propertyType: roleInlinePolicy,
+		client:       client,
 	}
 }
 
-func (rip *roleInlinePolicyMiner) fetchConf(input any) error {
+func (rip *roleInlinePolicyMiner) PropertyType() string { return rip.propertyType }
+
+func (rip *roleInlinePolicyMiner) FetchConf(input any) error {
 	roleInlinePolicyInput, ok := input.(*iam.ListRolePoliciesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListRolePoliciesInput type assertion failed")
@@ -139,10 +122,10 @@ func (rip *roleInlinePolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (rip *roleInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (rip *roleInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := rip.fetchConf(&iam.ListRolePoliciesInput{RoleName: aws.String(datum.name)}); err != nil {
+	if err := rip.FetchConf(&iam.ListRolePoliciesInput{RoleName: aws.String(datum.Name)}); err != nil {
 		return properties, fmt.Errorf("generate roleInlinePolicy: %w", err)
 	}
 
@@ -157,7 +140,7 @@ func (rip *roleInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerPrope
 				context.Background(),
 				&iam.GetRolePolicyInput{
 					PolicyName: aws.String(policyName),
-					RoleName:   aws.String(datum.name),
+					RoleName:   aws.String(datum.Name),
 				},
 			)
 			if err != nil {
@@ -195,17 +178,21 @@ func (rip *roleInlinePolicyMiner) generate(datum cacheInfo) ([]shared.MinerPrope
 
 // role managed policy (ListAttachedRolePolicies)
 type roleManagedPolicyMiner struct {
-	client    *iam.Client
-	paginator *iam.ListAttachedRolePoliciesPaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListAttachedRolePoliciesPaginator
 }
 
-func newRoleManagedPolicyMiner(client *iam.Client) propsCrawler {
+func newRoleManagedPolicyMiner(client *iam.Client) *roleManagedPolicyMiner {
 	return &roleManagedPolicyMiner{
-		client: client,
+		propertyType: roleManagedPolicy,
+		client:       client,
 	}
 }
 
-func (rmp *roleManagedPolicyMiner) fetchConf(input any) error {
+func (rmp *roleManagedPolicyMiner) PropertyType() string { return rmp.propertyType }
+
+func (rmp *roleManagedPolicyMiner) FetchConf(input any) error {
 	roleManagedPolicyInput, ok := input.(*iam.ListAttachedRolePoliciesInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListAttachedRolePoliciesInput type assertion failed")
@@ -215,10 +202,10 @@ func (rmp *roleManagedPolicyMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (rmp *roleManagedPolicyMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (rmp *roleManagedPolicyMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProperty, error) {
 	properties := []shared.MinerProperty{}
 
-	if err := rmp.fetchConf(&iam.ListAttachedRolePoliciesInput{RoleName: aws.String(datum.name)}); err != nil {
+	if err := rmp.FetchConf(&iam.ListAttachedRolePoliciesInput{RoleName: aws.String(datum.Name)}); err != nil {
 		return []shared.MinerProperty{}, fmt.Errorf("generate roleManagedPolicy: %w", err)
 	}
 
@@ -251,17 +238,21 @@ func (rmp *roleManagedPolicyMiner) generate(datum cacheInfo) ([]shared.MinerProp
 
 // role's instance profile
 type roleInstanceProfileMiner struct {
-	client    *iam.Client
-	paginator *iam.ListInstanceProfilesForRolePaginator
+	propertyType string
+	client       *iam.Client
+	paginator    *iam.ListInstanceProfilesForRolePaginator
 }
 
-func newRoleInstanceProfileMiner(client *iam.Client) propsCrawler {
+func newRoleInstanceProfileMiner(client *iam.Client) *roleInstanceProfileMiner {
 	return &roleInstanceProfileMiner{
-		client: client,
+		propertyType: roleInstanceProfile,
+		client:       client,
 	}
 }
 
-func (rip *roleInstanceProfileMiner) fetchConf(input any) error {
+func (rip *roleInstanceProfileMiner) PropertyType() string { return rip.propertyType }
+
+func (rip *roleInstanceProfileMiner) FetchConf(input any) error {
 	roleInstanceProfileInput, ok := input.(*iam.ListInstanceProfilesForRoleInput)
 	if !ok {
 		return fmt.Errorf("fetchConf: ListInstanceProfilesForRoleInput type assertion failed")
@@ -274,7 +265,9 @@ func (rip *roleInstanceProfileMiner) fetchConf(input any) error {
 	return nil
 }
 
-func (rip *roleInstanceProfileMiner) generate(datum cacheInfo) ([]shared.MinerProperty, error) {
+func (rip *roleInstanceProfileMiner) Generate(
+	datum utils.CacheInfo,
+) ([]shared.MinerProperty, error) {
 	type instanceProfileInfo struct {
 		Name string `json:"name"`
 		Id   string `json:"id"`
@@ -283,7 +276,7 @@ func (rip *roleInstanceProfileMiner) generate(datum cacheInfo) ([]shared.MinerPr
 
 	properties := []shared.MinerProperty{}
 
-	if err := rip.fetchConf(&iam.ListInstanceProfilesForRoleInput{RoleName: aws.String(datum.name)}); err != nil {
+	if err := rip.FetchConf(&iam.ListInstanceProfilesForRoleInput{RoleName: aws.String(datum.Name)}); err != nil {
 		return nil, fmt.Errorf("generate roleInstanceProfile: %w", err)
 	}
 
