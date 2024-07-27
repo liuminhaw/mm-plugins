@@ -51,71 +51,36 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 	for _, resourceType := range miningResources {
 		log.Printf("resource type: %s\n", resourceType)
 
+		var cachedData dataCache
 		switch resourceType {
 		case iamUser:
-			minedResources, err := mineResources(ctx, client, resourceType, memory.users)
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, minedResources...)
+			cachedData = memory.users
 		case iamGroup:
-			minedResources, err := mineResources(ctx, client, resourceType, memory.groups)
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, minedResources...)
+			cachedData = memory.groups
 		case iamPolicy:
-			minedResources, err := mineResources(ctx, client, resourceType, memory.policies)
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, minedResources...)
+			cachedData = memory.policies
 		case iamRole:
-			minedResources, err := mineResources(ctx, client, resourceType, memory.roles)
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, minedResources...)
+			cachedData = memory.roles
 		case iamAccount:
-			accountCrawler, err := mineResources(ctx, client, resourceType, dataCache{})
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, accountCrawler...)
+			cachedData = dataCache{}
 		case iamSSOProviders:
-			ssoCrawler, err := mineResources(ctx, client, resourceType, dataCache{})
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, ssoCrawler...)
+			cachedData = dataCache{}
 		case iamServerCertificate:
-			serverCertificateCrawler, err := mineResources(
-				ctx, client, resourceType, dataCache{},
-			)
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, serverCertificateCrawler...)
+			cachedData = dataCache{}
 		case iamVirtualMFADevice:
-			virtualMFACrawler, err := mineResources(ctx, client, resourceType, memory.virtualMFAs)
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, virtualMFACrawler...)
+			cachedData = memory.virtualMFAs
 		case iamInstanceProfile:
-			instanceProfileCrawler, err := mineResources(
-				ctx,
-				client,
-				resourceType,
-				memory.instanceProfiles,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("mine: %w", err)
-			}
-			resources = append(resources, instanceProfileCrawler...)
+			cachedData = memory.instanceProfiles
 		default:
 			log.Printf("Unsupported resource type: %s\n", resourceType)
+			continue
 		}
+
+		resourcesCrawler, err := mineResources(ctx, client, resourceType, cachedData)
+		if err != nil {
+			return nil, fmt.Errorf("mine: %w", err)
+		}
+		resources = append(resources, resourcesCrawler...)
 	}
 
 	return resources, nil
