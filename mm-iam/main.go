@@ -26,17 +26,21 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 	log.Printf("Plugin name: %s\n", PLUG_NAME)
 
 	// Get authentication profile from config
-	awsAuth, err := configAuth(mineConfig)
+	awsAuth, err := utils.ConfigAuth(mineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("mine: %w", err)
 	}
 
 	resources := shared.MinerResources{}
 	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithSharedConfigProfile(string(awsAuth.profile)),
+		config.WithSharedConfigProfile(string(awsAuth.Profile)),
 	)
 
-	client := iam.NewFromConfig(cfg)
+	serviceClient := newIAMClient(iam.NewFromConfig(cfg))
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("mine: %w", err)
+	}
 
 	ctx := context.Background()
 	if mineConfig.Equipments != nil {
@@ -44,7 +48,8 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 	}
 
 	memory := newCaching()
-	if err := memory.read(ctx, client); err != nil {
+
+	if err := memory.read(ctx, client.client); err != nil {
 		return nil, fmt.Errorf("mine: %w", err)
 	}
 
@@ -76,7 +81,7 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 			continue
 		}
 
-		resourcesCrawler, err := mineResources(ctx, client, resourceType, cachedData)
+		resourcesCrawler, err := mineResources(ctx, serviceClient, resourceType, cachedData)
 		if err != nil {
 			return nil, fmt.Errorf("mine: %w", err)
 		}
@@ -88,7 +93,7 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 
 func mineResources(
 	ctx context.Context,
-	client *iam.Client,
+	client utils.Client,
 	resourceType string,
 	data dataCache,
 ) (shared.MinerResources, error) {
@@ -115,7 +120,7 @@ func mineResources(
 		}
 		resource, err := resourceCrawler.Generate(cache)
 		if err != nil {
-			var configErr *mmIAMError
+			var configErr *utils.MMError
 			if errors.As(err, &configErr) {
 				log.Printf("No properties in resource %s found", resourceType)
 			} else {
@@ -141,19 +146,4 @@ func main() {
 		},
 		GRPCServer: plugin.DefaultGRPCServer,
 	})
-}
-
-type awsProfile struct {
-	profile string
-}
-
-// configAuth gets the authentication profile from the config
-// and returns an awsProfile struct with the profile name
-// for use in authenticating with AWS.
-func configAuth(mineConfig shared.MinerConfig) (awsProfile, error) {
-	if _, ok := mineConfig.Auth["profile"]; !ok {
-		return awsProfile{}, fmt.Errorf("configAuth: profile not found")
-	}
-
-	return awsProfile{profile: mineConfig.Auth["profile"]}, nil
 }

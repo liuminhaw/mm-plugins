@@ -2,9 +2,25 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/liuminhaw/mist-miner/shared"
 )
+
+type AwsProfile struct {
+	Profile string
+}
+
+// configAuth gets the authentication profile from the config
+// and returns an awsProfile struct with the profile name
+// for use in authenticating with AWS.
+func ConfigAuth(mineConfig shared.MinerConfig) (AwsProfile, error) {
+	if _, ok := mineConfig.Auth["profile"]; !ok {
+		return AwsProfile{}, fmt.Errorf("configAuth: profile not found")
+	}
+
+	return AwsProfile{Profile: mineConfig.Auth["profile"]}, nil
+}
 
 var ErrAttributeNotFound = errors.New("miner configuration attribute not found")
 

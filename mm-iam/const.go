@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 const (
 	// users
 	userDetail                    = "UserDetail"
@@ -79,55 +77,4 @@ var miningResources = []string{
 	iamServerCertificate,
 	iamVirtualMFADevice,
 	iamInstanceProfile,
-}
-
-var miningGroupProps = []string{
-	groupDetail,
-	groupInlinePolicy,
-	groupManagedPolicy,
-}
-
-var miningPolicyProps = []string{
-	policyDetail,
-	policyVersions,
-}
-
-var miningRoleProps = []string{
-	roleDetail,
-	roleInlinePolicy,
-	roleManagedPolicy,
-	roleInstanceProfile,
-}
-
-var miningAccountProps = []string{
-	accountPasswordPolicy,
-	accountSummary,
-	accountAlias,
-}
-
-var miningSSOProps = []string{
-	ssoOIDCProvider,
-	ssoSAMLProvider,
-}
-
-var miningServerCertificateProps = []string{
-	serverCertificateDetail,
-}
-
-var miningVirtualMFAProps = []string{
-	virtualMFADeviceDetail,
-	virtualMFADeviceTags,
-}
-
-var miningInstanceProfileProps = []string{
-	instanceProfileDetail,
-}
-
-type mmIAMError struct {
-	category string
-	code     string
-}
-
-func (e *mmIAMError) Error() string {
-	return fmt.Sprintf("%s: %s", e.category, e.code)
 }

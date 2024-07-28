@@ -11,14 +11,16 @@ import (
 )
 
 type serverCertificateResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newServerCertificateResource(client *iam.Client) utils.Crawler {
-	resource := serverCertificateResource{
-		client: client,
+func newServerCertificateResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newServerCertificateResource: %v", err)
 	}
-	return &resource
+
+	return &serverCertificateResource{serviceClient: client}, nil
 }
 
 func (s *serverCertificateResource) FetchConf(input any) error {
@@ -27,7 +29,7 @@ func (s *serverCertificateResource) FetchConf(input any) error {
 
 func (s *serverCertificateResource) Generate(dummy utils.CacheInfo) (shared.MinerResource, error) {
 	return utils.GetProperties(
-		s.client,
+		s.serviceClient,
 		"ServerCertificate",
 		dummy,
 		serverCertificatePropsCrawlerConstructors,
@@ -37,17 +39,23 @@ func (s *serverCertificateResource) Generate(dummy utils.CacheInfo) (shared.Mine
 // ServerCertificate detail
 type serverCertificateDetailMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	paginator     *iam.ListServerCertificatesPaginator
 	configuration *iam.GetServerCertificateOutput
 }
 
-func newServerCertificateDetailMiner(client *iam.Client) *serverCertificateDetailMiner {
-	resource := serverCertificateDetailMiner{
-		propertyType: serverCertificateDetail,
-		client:       client,
+func newServerCertificateDetailMiner(
+	serviceClient utils.Client,
+) (*serverCertificateDetailMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newServerCertificateDetailMiner: %v", err)
 	}
-	return &resource
+
+	return &serverCertificateDetailMiner{
+		propertyType:  serverCertificateDetail,
+		serviceClient: client,
+	}, nil
 }
 
 func (sc *serverCertificateDetailMiner) PropertyType() string { return sc.propertyType }
@@ -58,7 +66,10 @@ func (sc *serverCertificateDetailMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListServerCertificateInput type assertion failed")
 	}
 
-	sc.paginator = iam.NewListServerCertificatesPaginator(sc.client, serverCertificateInput)
+	sc.paginator = iam.NewListServerCertificatesPaginator(
+		sc.serviceClient.client,
+		serverCertificateInput,
+	)
 	return nil
 }
 
@@ -78,7 +89,7 @@ func (sc *serverCertificateDetailMiner) Generate(
 		}
 
 		for _, cert := range page.ServerCertificateMetadataList {
-			sc.configuration, err = sc.client.GetServerCertificate(
+			sc.configuration, err = sc.serviceClient.client.GetServerCertificate(
 				context.Background(),
 				&iam.GetServerCertificateInput{
 					ServerCertificateName: cert.ServerCertificateName,

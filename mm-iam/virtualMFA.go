@@ -11,14 +11,16 @@ import (
 )
 
 type virtualMFADeviceResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newVirtualMFADeviceResource(client *iam.Client) utils.Crawler {
-	resource := virtualMFADeviceResource{
-		client: client,
+func newVirtualMFADeviceResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newVirtualMFADeviceResource: %v", err)
 	}
-	return &resource
+
+	return &virtualMFADeviceResource{serviceClient: client}, nil
 }
 
 func (v *virtualMFADeviceResource) FetchConf(input any) error {
@@ -28,7 +30,7 @@ func (v *virtualMFADeviceResource) FetchConf(input any) error {
 func (v *virtualMFADeviceResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
 	Identifier := fmt.Sprintf("VirtualMFA_%s", datum.Id)
 	return utils.GetProperties(
-		v.client,
+		v.serviceClient,
 		Identifier,
 		datum,
 		virtualMFADevicePropsCrawlerConstructors,
@@ -37,15 +39,22 @@ func (v *virtualMFADeviceResource) Generate(datum utils.CacheInfo) (shared.Miner
 
 // virtualMFA devices detail
 type virtualMFADeviceDetailMiner struct {
-	propertyType string
-	client       *iam.Client
+	propertyType  string
+	serviceClient *iamClient
 }
 
-func newVirtualMFADeviceDetailMiner(client *iam.Client) *virtualMFADeviceDetailMiner {
-	return &virtualMFADeviceDetailMiner{
-		propertyType: virtualMFADeviceDetail,
-		client:       client,
+func newVirtualMFADeviceDetailMiner(
+	serviceClient utils.Client,
+) (*virtualMFADeviceDetailMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newVirtualMFADeviceDetailMiner: %v", err)
 	}
+
+	return &virtualMFADeviceDetailMiner{
+		propertyType:  virtualMFADeviceDetail,
+		serviceClient: client,
+	}, nil
 }
 
 func (vmd *virtualMFADeviceDetailMiner) PropertyType() string { return vmd.propertyType }
@@ -77,16 +86,21 @@ func (vmd *virtualMFADeviceDetailMiner) Generate(
 
 // virtualMFA device tags
 type virtualMFADeviceTagsMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListMFADeviceTagsPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListMFADeviceTagsPaginator
 }
 
-func newVirtualMFADeviceTagsMiner(client *iam.Client) *virtualMFADeviceTagsMiner {
-	return &virtualMFADeviceTagsMiner{
-		propertyType: virtualMFADeviceTags,
-		client:       client,
+func newVirtualMFADeviceTagsMiner(serviceClient utils.Client) (*virtualMFADeviceTagsMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newVirtualMFADeviceTagsMiner: %v", err)
 	}
+
+	return &virtualMFADeviceTagsMiner{
+		propertyType:  virtualMFADeviceTags,
+		serviceClient: client,
+	}, nil
 }
 
 func (vmt *virtualMFADeviceTagsMiner) PropertyType() string { return vmt.propertyType }
@@ -97,7 +111,7 @@ func (vmt *virtualMFADeviceTagsMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListMFADeviceTagsInput type assertion failed")
 	}
 
-	vmt.paginator = iam.NewListMFADeviceTagsPaginator(vmt.client, mfaDeviceTagsInput)
+	vmt.paginator = iam.NewListMFADeviceTagsPaginator(vmt.serviceClient.client, mfaDeviceTagsInput)
 	return nil
 }
 

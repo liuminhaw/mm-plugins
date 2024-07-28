@@ -10,14 +10,16 @@ import (
 )
 
 type accountResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newAccountResource(client *iam.Client) utils.Crawler {
-	resource := accountResource{
-		client: client,
+func newAccountResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newAccountResource: %v", err)
 	}
-	return &resource
+
+	return &accountResource{serviceClient: client}, nil
 }
 
 func (a *accountResource) FetchConf(input any) error {
@@ -25,29 +27,35 @@ func (a *accountResource) FetchConf(input any) error {
 }
 
 func (a *accountResource) Generate(dummy utils.CacheInfo) (shared.MinerResource, error) {
-	return utils.GetProperties(a.client, "Account", dummy, accountPropsCrawlerConstructors)
+	return utils.GetProperties(a.serviceClient, "Account", dummy, accountPropsCrawlerConstructors)
 }
 
 // Account password policy
 type accountPasswordPolicyMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetAccountPasswordPolicyOutput
 }
 
-func newAccountPasswordPolicyMiner(client *iam.Client) *accountPasswordPolicyMiner {
-	resource := accountPasswordPolicyMiner{
-		propertyType: accountPasswordPolicy,
-		client:       client,
+func newAccountPasswordPolicyMiner(
+	serviceClient utils.Client,
+) (*accountPasswordPolicyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newAccountPasswordPolicyMiner: %v", err)
 	}
-	return &resource
+
+	return &accountPasswordPolicyMiner{
+		propertyType:  accountPasswordPolicy,
+		serviceClient: client,
+	}, nil
 }
 
 func (pp *accountPasswordPolicyMiner) PropertyType() string { return pp.propertyType }
 
 func (pp *accountPasswordPolicyMiner) FetchConf(input any) error {
 	var err error
-	pp.configuration, err = pp.client.GetAccountPasswordPolicy(
+	pp.configuration, err = pp.serviceClient.client.GetAccountPasswordPolicy(
 		context.Background(),
 		&iam.GetAccountPasswordPolicyInput{},
 	)
@@ -88,23 +96,27 @@ func (pp *accountPasswordPolicyMiner) Generate(
 // Account summary
 type accountSummaryMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetAccountSummaryOutput
 }
 
-func newAccountSummaryMiner(client *iam.Client) *accountSummaryMiner {
-	resource := accountSummaryMiner{
-		propertyType: accountSummary,
-		client:       client,
+func newAccountSummaryMiner(serviceClient utils.Client) (*accountSummaryMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newAccountSummaryMiner: %v", err)
 	}
-	return &resource
+
+	return &accountSummaryMiner{
+		propertyType:  accountSummary,
+		serviceClient: client,
+	}, nil
 }
 
 func (as *accountSummaryMiner) PropertyType() string { return as.propertyType }
 
 func (as *accountSummaryMiner) FetchConf(input any) error {
 	var err error
-	as.configuration, err = as.client.GetAccountSummary(
+	as.configuration, err = as.serviceClient.client.GetAccountSummary(
 		context.Background(),
 		&iam.GetAccountSummaryInput{},
 	)
@@ -142,17 +154,21 @@ func (as *accountSummaryMiner) Generate(dummy utils.CacheInfo) ([]shared.MinerPr
 
 // Account alias
 type accountAliasMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListAccountAliasesPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListAccountAliasesPaginator
 }
 
-func newAccountAliasMiner(client *iam.Client) *accountAliasMiner {
-	resource := accountAliasMiner{
-		propertyType: accountAlias,
-		client:       client,
+func newAccountAliasMiner(serviceClient utils.Client) (*accountAliasMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newAccountAliasMiner: %v", err)
 	}
-	return &resource
+
+	return &accountAliasMiner{
+		propertyType:  accountAlias,
+		serviceClient: client,
+	}, nil
 }
 
 func (aa *accountAliasMiner) PropertyType() string { return aa.propertyType }
@@ -163,7 +179,7 @@ func (aa *accountAliasMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListAccountAliasesInput type assertion failed")
 	}
 
-	aa.paginator = iam.NewListAccountAliasesPaginator(aa.client, accountAliasInput)
+	aa.paginator = iam.NewListAccountAliasesPaginator(aa.serviceClient.client, accountAliasInput)
 	return nil
 }
 

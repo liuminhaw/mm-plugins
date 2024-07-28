@@ -11,14 +11,16 @@ import (
 )
 
 type ssoProvidersResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newSSOProvidersResource(client *iam.Client) utils.Crawler {
-	resource := ssoProvidersResource{
-		client: client,
+func newSSOProvidersResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newSSOProvidersResource: %v", err)
 	}
-	return &resource
+
+	return &ssoProvidersResource{serviceClient: client}, nil
 }
 
 func (s *ssoProvidersResource) FetchConf(input any) error {
@@ -27,7 +29,7 @@ func (s *ssoProvidersResource) FetchConf(input any) error {
 
 func (s *ssoProvidersResource) Generate(dummy utils.CacheInfo) (shared.MinerResource, error) {
 	return utils.GetProperties(
-		s.client,
+		s.serviceClient,
 		"SSOProviders",
 		dummy,
 		ssoProvidersPropsCrawlerConstructors,
@@ -37,23 +39,28 @@ func (s *ssoProvidersResource) Generate(dummy utils.CacheInfo) (shared.MinerReso
 // SSO OpenIDConnect provider
 type ssoOIDCProviderMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetOpenIDConnectProviderOutput
 	overview      *iam.ListOpenIDConnectProvidersOutput
 }
 
-func newSSOOIDCProviderMiner(client *iam.Client) *ssoOIDCProviderMiner {
-	return &ssoOIDCProviderMiner{
-		propertyType: ssoOIDCProvider,
-		client:       client,
+func newSSOOIDCProviderMiner(serviceClient utils.Client) (*ssoOIDCProviderMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newSSOOIDCProviderMiner: %v", err)
 	}
+
+	return &ssoOIDCProviderMiner{
+		propertyType:  ssoOIDCProvider,
+		serviceClient: client,
+	}, nil
 }
 
 func (op *ssoOIDCProviderMiner) PropertyType() string { return op.propertyType }
 
 func (op *ssoOIDCProviderMiner) FetchConf(input any) error {
 	var err error
-	op.overview, err = op.client.ListOpenIDConnectProviders(
+	op.overview, err = op.serviceClient.client.ListOpenIDConnectProviders(
 		context.Background(),
 		&iam.ListOpenIDConnectProvidersInput{},
 	)
@@ -72,7 +79,7 @@ func (op *ssoOIDCProviderMiner) Generate(dummy utils.CacheInfo) ([]shared.MinerP
 	}
 
 	for _, provider := range op.overview.OpenIDConnectProviderList {
-		output, err := op.client.GetOpenIDConnectProvider(
+		output, err := op.serviceClient.client.GetOpenIDConnectProvider(
 			context.Background(),
 			&iam.GetOpenIDConnectProviderInput{
 				OpenIDConnectProviderArn: provider.Arn,
@@ -104,23 +111,28 @@ func (op *ssoOIDCProviderMiner) Generate(dummy utils.CacheInfo) ([]shared.MinerP
 // SSO SAML provider
 type ssoSAMLProviderMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetSAMLProviderOutput
 	overview      *iam.ListSAMLProvidersOutput
 }
 
-func newSSOSAMLProviderMiner(client *iam.Client) *ssoSAMLProviderMiner {
-	return &ssoSAMLProviderMiner{
-		propertyType: ssoSAMLProvider,
-		client:       client,
+func newSSOSAMLProviderMiner(serviceClient utils.Client) (*ssoSAMLProviderMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newSSOSAMLProviderMiner: %v", err)
 	}
+
+	return &ssoSAMLProviderMiner{
+		propertyType:  ssoSAMLProvider,
+		serviceClient: client,
+	}, nil
 }
 
 func (sp *ssoSAMLProviderMiner) PropertyType() string { return sp.propertyType }
 
 func (sp *ssoSAMLProviderMiner) FetchConf(input any) error {
 	var err error
-	sp.overview, err = sp.client.ListSAMLProviders(
+	sp.overview, err = sp.serviceClient.client.ListSAMLProviders(
 		context.Background(),
 		&iam.ListSAMLProvidersInput{},
 	)
@@ -139,7 +151,7 @@ func (sp *ssoSAMLProviderMiner) Generate(dummy utils.CacheInfo) ([]shared.MinerP
 	}
 
 	for _, provider := range sp.overview.SAMLProviderList {
-		output, err := sp.client.GetSAMLProvider(
+		output, err := sp.serviceClient.client.GetSAMLProvider(
 			context.Background(),
 			&iam.GetSAMLProviderInput{
 				SAMLProviderArn: provider.Arn,

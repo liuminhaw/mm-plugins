@@ -11,14 +11,16 @@ import (
 )
 
 type policyResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newPolicyResource(client *iam.Client) utils.Crawler {
-	resource := policyResource{
-		client: client,
+func newPolicyResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newPolicyResource: %v", err)
 	}
-	return &resource
+
+	return &policyResource{serviceClient: client}, nil
 }
 
 func (p *policyResource) FetchConf(input any) error {
@@ -27,21 +29,26 @@ func (p *policyResource) FetchConf(input any) error {
 
 func (p *policyResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
 	identifier := fmt.Sprintf("Policy_%s", datum.Id)
-	return utils.GetProperties(p.client, identifier, datum, policyPropsCrawlerConstructors)
+	return utils.GetProperties(p.serviceClient, identifier, datum, policyPropsCrawlerConstructors)
 }
 
 // policy detail
 type policyDetailMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetPolicyOutput
 }
 
-func newPolicyDetailMiner(client *iam.Client) *policyDetailMiner {
-	return &policyDetailMiner{
-		propertyType: policyDetail,
-		client:       client,
+func newPolicyDetailMiner(serviceClient utils.Client) (*policyDetailMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newPolicyDetailMiner: %v", err)
 	}
+
+	return &policyDetailMiner{
+		propertyType:  policyDetail,
+		serviceClient: client,
+	}, nil
 }
 
 func (pd *policyDetailMiner) PropertyType() string { return pd.propertyType }
@@ -53,7 +60,10 @@ func (pd *policyDetailMiner) FetchConf(input any) error {
 	}
 
 	var err error
-	pd.configuration, err = pd.client.GetPolicy(context.Background(), policyDetailInput)
+	pd.configuration, err = pd.serviceClient.client.GetPolicy(
+		context.Background(),
+		policyDetailInput,
+	)
 	if err != nil {
 		return fmt.Errorf("fetchConf: %w", err)
 	}
@@ -89,16 +99,21 @@ func (pd *policyDetailMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProp
 // policy versions
 type policyVersionsMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetPolicyVersionOutput
 	paginator     *iam.ListPolicyVersionsPaginator
 }
 
-func newPolicyVersionsMiner(client *iam.Client) *policyVersionsMiner {
-	return &policyVersionsMiner{
-		propertyType: policyVersions,
-		client:       client,
+func newPolicyVersionsMiner(serviceClient utils.Client) (*policyVersionsMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newPolicyVersionsMiner: %v", err)
 	}
+
+	return &policyVersionsMiner{
+		propertyType:  policyVersions,
+		serviceClient: client,
+	}, nil
 }
 
 func (pv *policyVersionsMiner) PropertyType() string { return pv.propertyType }
@@ -109,7 +124,7 @@ func (pv *policyVersionsMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListPolicyVersionsInput type assertion failed")
 	}
 
-	pv.paginator = iam.NewListPolicyVersionsPaginator(pv.client, policyVersionsInput)
+	pv.paginator = iam.NewListPolicyVersionsPaginator(pv.serviceClient.client, policyVersionsInput)
 	return nil
 }
 
@@ -127,7 +142,7 @@ func (pv *policyVersionsMiner) Generate(datum utils.CacheInfo) ([]shared.MinerPr
 		}
 
 		for _, version := range page.Versions {
-			pv.configuration, err = pv.client.GetPolicyVersion(
+			pv.configuration, err = pv.serviceClient.client.GetPolicyVersion(
 				context.Background(),
 				&iam.GetPolicyVersionInput{
 					PolicyArn: aws.String(datum.Name),

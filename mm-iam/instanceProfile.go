@@ -11,14 +11,16 @@ import (
 )
 
 type instanceProfileResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newInstanceProfileResource(client *iam.Client) utils.Crawler {
-	resource := instanceProfileResource{
-		client: client,
+func newInstanceProfileResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newInstanceProfileResource: %v", err)
 	}
-	return &resource
+
+	return &instanceProfileResource{serviceClient: client}, nil
 }
 
 func (i *instanceProfileResource) FetchConf(input any) error {
@@ -27,21 +29,33 @@ func (i *instanceProfileResource) FetchConf(input any) error {
 
 func (i *instanceProfileResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
 	Identifier := fmt.Sprintf("InstanceProfile_%s", datum.Id)
-	return utils.GetProperties(i.client, Identifier, datum, instanceProfilePropsCrawlerConstructors)
+	return utils.GetProperties(
+		i.serviceClient,
+		Identifier,
+		datum,
+		instanceProfilePropsCrawlerConstructors,
+	)
 }
 
 // instanceProfile detail
 type instanceProfileDetailMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetInstanceProfileOutput
 }
 
-func newInstanceProfileDetailMiner(client *iam.Client) *instanceProfileDetailMiner {
-	return &instanceProfileDetailMiner{
-		propertyType: instanceProfileDetail,
-		client:       client,
+func newInstanceProfileDetailMiner(
+	serviceClient utils.Client,
+) (*instanceProfileDetailMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newInstanceProfileDetailMiner: %v", err)
 	}
+
+	return &instanceProfileDetailMiner{
+		propertyType:  instanceProfileDetail,
+		serviceClient: client,
+	}, nil
 }
 
 func (ipd *instanceProfileDetailMiner) PropertyType() string { return ipd.propertyType }
@@ -53,7 +67,7 @@ func (ipd *instanceProfileDetailMiner) FetchConf(input any) error {
 	}
 
 	var err error
-	ipd.configuration, err = ipd.client.GetInstanceProfile(
+	ipd.configuration, err = ipd.serviceClient.client.GetInstanceProfile(
 		context.Background(),
 		instanceProfileInput,
 	)

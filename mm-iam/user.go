@@ -16,14 +16,17 @@ import (
 )
 
 type userResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newUserResource(client *iam.Client) utils.Crawler {
-	resource := userResource{
-		client: client,
+func newUserResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserResource: %w", err)
 	}
-	return &resource
+
+	// return &userResource{client: client}, nil
+	return &userResource{serviceClient: client}, nil
 }
 
 func (u *userResource) FetchConf(input any) error {
@@ -32,21 +35,26 @@ func (u *userResource) FetchConf(input any) error {
 
 func (u *userResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
 	identifier := fmt.Sprintf("User_%s", datum.Id)
-	return utils.GetProperties(u.client, identifier, datum, userPropsCrawlerConstructors)
+	return utils.GetProperties(u.serviceClient, identifier, datum, userPropsCrawlerConstructors)
 }
 
 // user detail (GetUser)
 type userDetailMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetUserOutput
 }
 
-func newUserDetailMiner(client *iam.Client) *userDetailMiner {
-	return &userDetailMiner{
-		propertyType: userDetail,
-		client:       client,
+func newUserDetailMiner(serviceClient utils.Client) (*userDetailMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserDetailMiner: %w", err)
 	}
+
+	return &userDetailMiner{
+		propertyType:  userDetail,
+		serviceClient: client,
+	}, nil
 }
 
 func (ud *userDetailMiner) PropertyType() string { return ud.propertyType }
@@ -58,7 +66,7 @@ func (ud *userDetailMiner) FetchConf(input any) error {
 	}
 
 	var err error
-	ud.configuration, err = ud.client.GetUser(context.Background(), userDetailInput)
+	ud.configuration, err = ud.serviceClient.client.GetUser(context.Background(), userDetailInput)
 	if err != nil {
 		return fmt.Errorf("fetchConf userDetail: %w", err)
 	}
@@ -94,15 +102,20 @@ func (ud *userDetailMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProper
 // user login profile (GetLoginProfile)
 type userLoginProfileMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetLoginProfileOutput
 }
 
-func newUserLoginProfileMiner(client *iam.Client) *userLoginProfileMiner {
-	return &userLoginProfileMiner{
-		propertyType: userLoginProfile,
-		client:       client,
+func newUserLoginProfileMiner(serviceClient utils.Client) (*userLoginProfileMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserLoginProfileMiner: %w", err)
 	}
+
+	return &userLoginProfileMiner{
+		propertyType:  userLoginProfile,
+		serviceClient: client,
+	}, nil
 }
 
 func (ulp *userLoginProfileMiner) PropertyType() string { return ulp.propertyType }
@@ -114,13 +127,16 @@ func (ulp *userLoginProfileMiner) FetchConf(input any) error {
 	}
 
 	var err error
-	ulp.configuration, err = ulp.client.GetLoginProfile(context.Background(), loginProfileInput)
+	ulp.configuration, err = ulp.serviceClient.client.GetLoginProfile(
+		context.Background(),
+		loginProfileInput,
+	)
 	if err != nil {
 		var apiErr smithy.APIError
 		if ok := errors.As(err, &apiErr); ok {
 			switch apiErr.ErrorCode() {
 			case "NoSuchEntity":
-				return &mmIAMError{"LoginProfile", noConfig}
+				return &utils.MMError{Category: "LoginProfile", Code: noConfig}
 			default:
 				return fmt.Errorf("fetchConf userLoginProfile: %w", err)
 			}
@@ -158,16 +174,21 @@ func (ulp *userLoginProfileMiner) Generate(datum utils.CacheInfo) ([]shared.Mine
 
 // user accesskey (NewListAccessKeysPaginator)
 type userAccessKeyMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListAccessKeysPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListAccessKeysPaginator
 }
 
-func newUserAccessKeyMiner(client *iam.Client) *userAccessKeyMiner {
-	return &userAccessKeyMiner{
-		propertyType: userAccessKey,
-		client:       client,
+func newUserAccessKeyMiner(serviceClient utils.Client) (*userAccessKeyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("generate userAccessKey: %w", err)
 	}
+
+	return &userAccessKeyMiner{
+		propertyType:  userAccessKey,
+		serviceClient: client,
+	}, nil
 }
 
 func (uak *userAccessKeyMiner) PropertyType() string { return uak.propertyType }
@@ -178,7 +199,7 @@ func (uak *userAccessKeyMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListAccessKeysInput type assertion failed")
 	}
 
-	uak.paginator = iam.NewListAccessKeysPaginator(uak.client, listAccessKeysInput)
+	uak.paginator = iam.NewListAccessKeysPaginator(uak.serviceClient.client, listAccessKeysInput)
 	return nil
 }
 
@@ -218,16 +239,21 @@ func (uak *userAccessKeyMiner) Generate(datum utils.CacheInfo) ([]shared.MinerPr
 
 // user MFA device (NewListMFADevicesPaginator)
 type userMFADeviceMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListMFADevicesPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListMFADevicesPaginator
 }
 
-func newUserMFADeviceMiner(client *iam.Client) *userMFADeviceMiner {
-	return &userMFADeviceMiner{
-		propertyType: userMFADevice,
-		client:       client,
+func newUserMFADeviceMiner(serviceClient utils.Client) (*userMFADeviceMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("generate userMFADevice: %w", err)
 	}
+
+	return &userMFADeviceMiner{
+		propertyType:  userMFADevice,
+		serviceClient: client,
+	}, nil
 }
 
 func (umd *userMFADeviceMiner) PropertyType() string { return umd.propertyType }
@@ -238,7 +264,7 @@ func (umd *userMFADeviceMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListMFADevicesInput type assertion failed")
 	}
 
-	umd.paginator = iam.NewListMFADevicesPaginator(umd.client, listMFADevicesInput)
+	umd.paginator = iam.NewListMFADevicesPaginator(umd.serviceClient.client, listMFADevicesInput)
 	return nil
 }
 
@@ -279,7 +305,7 @@ func (umd *userMFADeviceMiner) Generate(datum utils.CacheInfo) ([]shared.MinerPr
 				}
 			} else {
 				log.Printf("device: %s, type: hardware MFA Device", aws.ToString(mfaDevice.SerialNumber))
-				device, err := umd.client.GetMFADevice(
+				device, err := umd.serviceClient.client.GetMFADevice(
 					context.Background(),
 					&iam.GetMFADeviceInput{SerialNumber: mfaDevice.SerialNumber},
 				)
@@ -301,16 +327,21 @@ func (umd *userMFADeviceMiner) Generate(datum utils.CacheInfo) ([]shared.MinerPr
 
 // user SSH public key (NewListSSHPublicKeysPaginator)
 type userSSHPublicKeyMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListSSHPublicKeysPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListSSHPublicKeysPaginator
 }
 
-func newUserSSHPublicKeyMiner(client *iam.Client) *userSSHPublicKeyMiner {
-	return &userSSHPublicKeyMiner{
-		propertyType: userSSHPublicKey,
-		client:       client,
+func newUserSSHPublicKeyMiner(serviceClient utils.Client) (*userSSHPublicKeyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserSSHPublicKeyMiner: %w", err)
 	}
+
+	return &userSSHPublicKeyMiner{
+		propertyType:  userSSHPublicKey,
+		serviceClient: client,
+	}, nil
 }
 
 func (uspk *userSSHPublicKeyMiner) PropertyType() string { return uspk.propertyType }
@@ -321,7 +352,7 @@ func (uspk *userSSHPublicKeyMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListSSHPublicKeysInput type assertion failed")
 	}
 
-	uspk.paginator = iam.NewListSSHPublicKeysPaginator(uspk.client, sshPulicKeyInput)
+	uspk.paginator = iam.NewListSSHPublicKeysPaginator(uspk.serviceClient.client, sshPulicKeyInput)
 	return nil
 }
 
@@ -339,7 +370,7 @@ func (uspk *userSSHPublicKeyMiner) Generate(datum utils.CacheInfo) ([]shared.Min
 		}
 
 		for _, keyMetadata := range page.SSHPublicKeys {
-			output, err := uspk.client.GetSSHPublicKey(
+			output, err := uspk.serviceClient.client.GetSSHPublicKey(
 				context.Background(),
 				&iam.GetSSHPublicKeyInput{
 					Encoding:       types.EncodingTypePem,
@@ -375,15 +406,22 @@ func (uspk *userSSHPublicKeyMiner) Generate(datum utils.CacheInfo) ([]shared.Min
 // user Service Specific Credential (ListServiceSpecificCredentials)
 type userServiceSpecificCredentialMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.ListServiceSpecificCredentialsOutput
 }
 
-func newUserServiceSpecificCredentialMiner(client *iam.Client) *userServiceSpecificCredentialMiner {
-	return &userServiceSpecificCredentialMiner{
-		propertyType: userServiceSpecificCredential,
-		client:       client,
+func newUserServiceSpecificCredentialMiner(
+	serviceClient utils.Client,
+) (*userServiceSpecificCredentialMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserServiceSpecificCredentialMiner: %w", err)
 	}
+
+	return &userServiceSpecificCredentialMiner{
+		propertyType:  userServiceSpecificCredential,
+		serviceClient: client,
+	}, nil
 }
 
 func (ussc *userServiceSpecificCredentialMiner) PropertyType() string { return ussc.propertyType }
@@ -395,7 +433,7 @@ func (ussc *userServiceSpecificCredentialMiner) FetchConf(input any) error {
 	}
 
 	var err error
-	ussc.configuration, err = ussc.client.ListServiceSpecificCredentials(
+	ussc.configuration, err = ussc.serviceClient.client.ListServiceSpecificCredentials(
 		context.Background(),
 		listServiceSpecificCredentialsInput,
 	)
@@ -437,16 +475,23 @@ func (ussc *userServiceSpecificCredentialMiner) Generate(
 
 // user signing certificate (NewListSigningCertificatesPaginator)
 type userSigningCertificateMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListSigningCertificatesPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListSigningCertificatesPaginator
 }
 
-func newUserSigningCertificateMiner(client *iam.Client) *userSigningCertificateMiner {
-	return &userSigningCertificateMiner{
-		propertyType: userSigningCertificate,
-		client:       client,
+func newUserSigningCertificateMiner(
+	serviceClient utils.Client,
+) (*userSigningCertificateMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserSigningCertificateMiner: %w", err)
 	}
+
+	return &userSigningCertificateMiner{
+		propertyType:  userSigningCertificate,
+		serviceClient: client,
+	}, nil
 }
 
 func (usc *userSigningCertificateMiner) PropertyType() string { return usc.propertyType }
@@ -458,7 +503,7 @@ func (usc *userSigningCertificateMiner) FetchConf(input any) error {
 	}
 
 	usc.paginator = iam.NewListSigningCertificatesPaginator(
-		usc.client,
+		usc.serviceClient.client,
 		listSigningCertificatesInput,
 	)
 	return nil
@@ -508,16 +553,21 @@ func (usc *userSigningCertificateMiner) Generate(
 // Including information about the user's inline policies
 type userInlinePolicyMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	paginator     *iam.ListUserPoliciesPaginator
 	configuration *iam.GetUserPolicyOutput
 }
 
-func newUserInlinePolicyMiner(client *iam.Client) *userInlinePolicyMiner {
-	return &userInlinePolicyMiner{
-		propertyType: userInlinePolicy,
-		client:       client,
+func newUserInlinePolicyMiner(serviceClient utils.Client) (*userInlinePolicyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserInlinePolicyMiner: %w", err)
 	}
+
+	return &userInlinePolicyMiner{
+		propertyType:  userInlinePolicy,
+		serviceClient: client,
+	}, nil
 }
 
 func (uip *userInlinePolicyMiner) PropertyType() string { return uip.propertyType }
@@ -528,7 +578,10 @@ func (uip *userInlinePolicyMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListUserPoliciesInput type assertion failed")
 	}
 
-	uip.paginator = iam.NewListUserPoliciesPaginator(uip.client, userInlinePolicyInput)
+	uip.paginator = iam.NewListUserPoliciesPaginator(
+		uip.serviceClient.client,
+		userInlinePolicyInput,
+	)
 	return nil
 }
 
@@ -546,7 +599,7 @@ func (uip *userInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.Mine
 		}
 
 		for _, policyName := range page.PolicyNames {
-			uip.configuration, err = uip.client.GetUserPolicy(
+			uip.configuration, err = uip.serviceClient.client.GetUserPolicy(
 				context.Background(),
 				&iam.GetUserPolicyInput{
 					PolicyName: aws.String(policyName),
@@ -589,16 +642,21 @@ func (uip *userInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.Mine
 // user managed policy
 // Including information about the user's managed policies
 type userManagedPolicyMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListAttachedUserPoliciesPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListAttachedUserPoliciesPaginator
 }
 
-func newUserManagedPolicyMiner(client *iam.Client) *userManagedPolicyMiner {
-	return &userManagedPolicyMiner{
-		propertyType: userManagedPolicy,
-		client:       client,
+func newUserManagedPolicyMiner(serviceClient utils.Client) (*userManagedPolicyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserManagedPolicyMiner: %w", err)
 	}
+
+	return &userManagedPolicyMiner{
+		propertyType:  userManagedPolicy,
+		serviceClient: client,
+	}, nil
 }
 
 func (ump *userManagedPolicyMiner) PropertyType() string { return ump.propertyType }
@@ -609,7 +667,10 @@ func (ump *userManagedPolicyMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListAttachedUserPoliciesInput type assertion failed")
 	}
 
-	ump.paginator = iam.NewListAttachedUserPoliciesPaginator(ump.client, userManagedPolicyInput)
+	ump.paginator = iam.NewListAttachedUserPoliciesPaginator(
+		ump.serviceClient.client,
+		userManagedPolicyInput,
+	)
 	return nil
 }
 
@@ -649,16 +710,21 @@ func (ump *userManagedPolicyMiner) Generate(datum utils.CacheInfo) ([]shared.Min
 
 // user belongs groups
 type userGroupsMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListGroupsForUserPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListGroupsForUserPaginator
 }
 
-func newUserGroupsMiner(client *iam.Client) *userGroupsMiner {
-	return &userGroupsMiner{
-		propertyType: userGroups,
-		client:       client,
+func newUserGroupsMiner(serviceClient utils.Client) (*userGroupsMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newUserGroupsMiner: %w", err)
 	}
+
+	return &userGroupsMiner{
+		propertyType:  userGroups,
+		serviceClient: client,
+	}, nil
 }
 
 func (ug *userGroupsMiner) PropertyType() string { return ug.propertyType }
@@ -669,7 +735,7 @@ func (ug *userGroupsMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListGroupsForUserInput type assertion failed")
 	}
 
-	ug.paginator = iam.NewListGroupsForUserPaginator(ug.client, userGroupsInput)
+	ug.paginator = iam.NewListGroupsForUserPaginator(ug.serviceClient.client, userGroupsInput)
 	return nil
 }
 

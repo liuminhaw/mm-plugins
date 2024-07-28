@@ -6,11 +6,11 @@ const (
 	noProps = "NoProperties"
 )
 
-type mmError struct {
-	category string
-	code     string
+type MMError struct {
+	Category string
+	Code     string
 }
 
-func (e *mmError) Error() string {
-	return fmt.Sprintf("%s: %s", e.category, e.code)
+func (e *MMError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Category, e.Code)
 }

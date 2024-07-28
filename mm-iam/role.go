@@ -11,14 +11,16 @@ import (
 )
 
 type roleResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newRoleResource(client *iam.Client) utils.Crawler {
-	resource := roleResource{
-		client: client,
+func newRoleResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newRoleResource: %v", err)
 	}
-	return &resource
+
+	return &roleResource{serviceClient: client}, nil
 }
 
 func (r *roleResource) FetchConf(input any) error {
@@ -27,21 +29,26 @@ func (r *roleResource) FetchConf(input any) error {
 
 func (r *roleResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
 	identifier := fmt.Sprintf("Role_%s", datum.Id)
-	return utils.GetProperties(r.client, identifier, datum, rolePropsCrawlerConstructors)
+	return utils.GetProperties(r.serviceClient, identifier, datum, rolePropsCrawlerConstructors)
 }
 
 // role detail (GetRole)
 type roleDetailMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetRoleOutput
 }
 
-func newRoleDetailMiner(client *iam.Client) *roleDetailMiner {
-	return &roleDetailMiner{
-		propertyType: roleDetail,
-		client:       client,
+func newRoleDetailMiner(serviceClient utils.Client) (*roleDetailMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newRoleDetailMiner: %v", err)
 	}
+
+	return &roleDetailMiner{
+		propertyType:  roleDetail,
+		serviceClient: client,
+	}, nil
 }
 
 func (rd *roleDetailMiner) PropertyType() string { return rd.propertyType }
@@ -53,7 +60,7 @@ func (rd *roleDetailMiner) FetchConf(input any) error {
 	}
 
 	var err error
-	rd.configuration, err = rd.client.GetRole(context.Background(), roleDetailInput)
+	rd.configuration, err = rd.serviceClient.client.GetRole(context.Background(), roleDetailInput)
 	if err != nil {
 		return fmt.Errorf("fetchConf: %w", err)
 	}
@@ -98,16 +105,21 @@ func (rd *roleDetailMiner) Generate(datum utils.CacheInfo) ([]shared.MinerProper
 // role inline policy (GetRolePolicy)
 type roleInlinePolicyMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	paginator     *iam.ListRolePoliciesPaginator
 	configuration *iam.GetRolePolicyOutput
 }
 
-func newRoleInlinePolicyMiner(client *iam.Client) *roleInlinePolicyMiner {
-	return &roleInlinePolicyMiner{
-		propertyType: roleInlinePolicy,
-		client:       client,
+func newRoleInlinePolicyMiner(serviceClient utils.Client) (*roleInlinePolicyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newRoleInlinePolicyMiner: %v", err)
 	}
+
+	return &roleInlinePolicyMiner{
+		propertyType:  roleInlinePolicy,
+		serviceClient: client,
+	}, nil
 }
 
 func (rip *roleInlinePolicyMiner) PropertyType() string { return rip.propertyType }
@@ -118,7 +130,10 @@ func (rip *roleInlinePolicyMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListRolePoliciesInput type assertion failed")
 	}
 
-	rip.paginator = iam.NewListRolePoliciesPaginator(rip.client, roleInlinePolicyInput)
+	rip.paginator = iam.NewListRolePoliciesPaginator(
+		rip.serviceClient.client,
+		roleInlinePolicyInput,
+	)
 	return nil
 }
 
@@ -136,7 +151,7 @@ func (rip *roleInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.Mine
 		}
 
 		for _, policyName := range page.PolicyNames {
-			rip.configuration, err = rip.client.GetRolePolicy(
+			rip.configuration, err = rip.serviceClient.client.GetRolePolicy(
 				context.Background(),
 				&iam.GetRolePolicyInput{
 					PolicyName: aws.String(policyName),
@@ -178,16 +193,21 @@ func (rip *roleInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.Mine
 
 // role managed policy (ListAttachedRolePolicies)
 type roleManagedPolicyMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListAttachedRolePoliciesPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListAttachedRolePoliciesPaginator
 }
 
-func newRoleManagedPolicyMiner(client *iam.Client) *roleManagedPolicyMiner {
-	return &roleManagedPolicyMiner{
-		propertyType: roleManagedPolicy,
-		client:       client,
+func newRoleManagedPolicyMiner(serviceClient utils.Client) (*roleManagedPolicyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newRoleManagedPolicyMiner: %v", err)
 	}
+
+	return &roleManagedPolicyMiner{
+		propertyType:  roleManagedPolicy,
+		serviceClient: client,
+	}, nil
 }
 
 func (rmp *roleManagedPolicyMiner) PropertyType() string { return rmp.propertyType }
@@ -198,7 +218,10 @@ func (rmp *roleManagedPolicyMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListAttachedRolePoliciesInput type assertion failed")
 	}
 
-	rmp.paginator = iam.NewListAttachedRolePoliciesPaginator(rmp.client, roleManagedPolicyInput)
+	rmp.paginator = iam.NewListAttachedRolePoliciesPaginator(
+		rmp.serviceClient.client,
+		roleManagedPolicyInput,
+	)
 	return nil
 }
 
@@ -238,16 +261,21 @@ func (rmp *roleManagedPolicyMiner) Generate(datum utils.CacheInfo) ([]shared.Min
 
 // role's instance profile
 type roleInstanceProfileMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListInstanceProfilesForRolePaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListInstanceProfilesForRolePaginator
 }
 
-func newRoleInstanceProfileMiner(client *iam.Client) *roleInstanceProfileMiner {
-	return &roleInstanceProfileMiner{
-		propertyType: roleInstanceProfile,
-		client:       client,
+func newRoleInstanceProfileMiner(serivceClient utils.Client) (*roleInstanceProfileMiner, error) {
+	client, err := assertIAMClient(serivceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newRoleInstanceProfileMiner: %v", err)
 	}
+
+	return &roleInstanceProfileMiner{
+		propertyType:  roleInstanceProfile,
+		serviceClient: client,
+	}, nil
 }
 
 func (rip *roleInstanceProfileMiner) PropertyType() string { return rip.propertyType }
@@ -259,7 +287,7 @@ func (rip *roleInstanceProfileMiner) FetchConf(input any) error {
 	}
 
 	rip.paginator = iam.NewListInstanceProfilesForRolePaginator(
-		rip.client,
+		rip.serviceClient.client,
 		roleInstanceProfileInput,
 	)
 	return nil

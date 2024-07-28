@@ -11,14 +11,16 @@ import (
 )
 
 type groupResource struct {
-	client *iam.Client
+	serviceClient *iamClient
 }
 
-func newGroupResource(client *iam.Client) utils.Crawler {
-	resource := groupResource{
-		client: client,
+func newGroupResource(serviceClient utils.Client) (utils.Crawler, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newGroupResource: %v", err)
 	}
-	return &resource
+
+	return &groupResource{serviceClient: client}, nil
 }
 
 func (g *groupResource) FetchConf(input any) error {
@@ -27,22 +29,27 @@ func (g *groupResource) FetchConf(input any) error {
 
 func (g *groupResource) Generate(datum utils.CacheInfo) (shared.MinerResource, error) {
 	identifier := fmt.Sprintf("Group_%s", datum.Id)
-	return utils.GetProperties(g.client, identifier, datum, groupPropsCrawlerConstructors)
+	return utils.GetProperties(g.serviceClient, identifier, datum, groupPropsCrawlerConstructors)
 }
 
 // group detail
 // Including information about the group and its users
 type groupDetailMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	configuration *iam.GetGroupOutput
 }
 
-func newGroupDetailMiner(client *iam.Client) *groupDetailMiner {
-	return &groupDetailMiner{
-		propertyType: groupDetail,
-		client:       client,
+func newGroupDetailMiner(serviceClient utils.Client) (*groupDetailMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newGroupDetailMiner: %v", err)
 	}
+
+	return &groupDetailMiner{
+		propertyType:  groupDetail,
+		serviceClient: client,
+	}, nil
 }
 
 func (gd *groupDetailMiner) PropertyType() string { return gd.propertyType }
@@ -54,7 +61,7 @@ func (gd *groupDetailMiner) FetchConf(input any) error {
 	}
 
 	var err error
-	gd.configuration, err = gd.client.GetGroup(context.Background(), groupDetailInput)
+	gd.configuration, err = gd.serviceClient.client.GetGroup(context.Background(), groupDetailInput)
 	if err != nil {
 		return fmt.Errorf("fetchConf groupDetail: %w", err)
 	}
@@ -138,16 +145,21 @@ func (gd *groupDetailMiner) groupUserProp() ([]shared.MinerProperty, error) {
 // Including information about the group's inline policies
 type groupInlinePolicyMiner struct {
 	propertyType  string
-	client        *iam.Client
+	serviceClient *iamClient
 	paginator     *iam.ListGroupPoliciesPaginator
 	configuration *iam.GetGroupPolicyOutput
 }
 
-func newGroupInlinePolicyMiner(client *iam.Client) *groupInlinePolicyMiner {
-	return &groupInlinePolicyMiner{
-		propertyType: groupInlinePolicy,
-		client:       client,
+func newGroupInlinePolicyMiner(serviceClient utils.Client) (*groupInlinePolicyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newGroupInlinePolicyMiner: %v", err)
 	}
+
+	return &groupInlinePolicyMiner{
+		propertyType:  groupInlinePolicy,
+		serviceClient: client,
+	}, nil
 }
 
 func (gip *groupInlinePolicyMiner) PropertyType() string { return gip.propertyType }
@@ -158,7 +170,10 @@ func (gip *groupInlinePolicyMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListGroupPoliciesInput type assertion failed")
 	}
 
-	gip.paginator = iam.NewListGroupPoliciesPaginator(gip.client, groupInlinePolicyInput)
+	gip.paginator = iam.NewListGroupPoliciesPaginator(
+		gip.serviceClient.client,
+		groupInlinePolicyInput,
+	)
 	return nil
 }
 
@@ -176,7 +191,7 @@ func (gip *groupInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.Min
 		}
 
 		for _, policyName := range page.PolicyNames {
-			gip.configuration, err = gip.client.GetGroupPolicy(
+			gip.configuration, err = gip.serviceClient.client.GetGroupPolicy(
 				context.Background(),
 				&iam.GetGroupPolicyInput{
 					GroupName:  aws.String(datum.Name),
@@ -219,16 +234,21 @@ func (gip *groupInlinePolicyMiner) Generate(datum utils.CacheInfo) ([]shared.Min
 // group managed policy (ListAttachedGroupPolicies)
 // Including information about the group's attached managed policies
 type groupManagedPolicyMiner struct {
-	propertyType string
-	client       *iam.Client
-	paginator    *iam.ListAttachedGroupPoliciesPaginator
+	propertyType  string
+	serviceClient *iamClient
+	paginator     *iam.ListAttachedGroupPoliciesPaginator
 }
 
-func newGroupManagedPolicyMiner(client *iam.Client) *groupManagedPolicyMiner {
-	return &groupManagedPolicyMiner{
-		propertyType: groupManagedPolicy,
-		client:       client,
+func newGroupManagedPolicyMiner(serviceClient utils.Client) (*groupManagedPolicyMiner, error) {
+	client, err := assertIAMClient(serviceClient)
+	if err != nil {
+		return nil, fmt.Errorf("newGroupManagedPolicyMiner: %v", err)
 	}
+
+	return &groupManagedPolicyMiner{
+		propertyType:  groupManagedPolicy,
+		serviceClient: client,
+	}, nil
 }
 
 func (gmp *groupManagedPolicyMiner) PropertyType() string { return gmp.propertyType }
@@ -239,7 +259,10 @@ func (gmp *groupManagedPolicyMiner) FetchConf(input any) error {
 		return fmt.Errorf("fetchConf: ListAttachedGroupPoliciesInput type assertion failed")
 	}
 
-	gmp.paginator = iam.NewListAttachedGroupPoliciesPaginator(gmp.client, groupManagedPolicyInput)
+	gmp.paginator = iam.NewListAttachedGroupPoliciesPaginator(
+		gmp.serviceClient.client,
+		groupManagedPolicyInput,
+	)
 	return nil
 }
 
