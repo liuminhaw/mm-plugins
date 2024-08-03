@@ -80,7 +80,7 @@ func GetProperties(
 
 	// Check if there are any properties
 	if resource.Properties == nil || len(resource.Properties) == 0 {
-		return shared.MinerResource{}, &MMError{identifier, noProps}
+		return shared.MinerResource{}, &MMError{identifier, NoProps}
 	}
 
 	return resource, nil

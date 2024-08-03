@@ -3,7 +3,8 @@ package utils
 import "fmt"
 
 const (
-	noProps = "NoProperties"
+	NoProps  = "NoProperties"
+	NoConfig = "NoConfiguration"
 )
 
 type MMError struct {
