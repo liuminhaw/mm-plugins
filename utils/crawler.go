@@ -10,6 +10,7 @@ import (
 )
 
 type CacheInfo struct {
+	Alias   string
 	Name    string
 	Id      string
 	Content string
@@ -55,6 +56,7 @@ func GetProperties(
 ) (shared.MinerResource, error) {
 	resource := shared.MinerResource{
 		Identifier: identifier,
+		Alias:      datum.Alias,
 	}
 
 	for _, constructor := range constructors {

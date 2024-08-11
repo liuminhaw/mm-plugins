@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -72,8 +73,9 @@ func (c *caching) readUsers(client *iam.Client) error {
 
 		for _, user := range page.Users {
 			c.users.caches = append(c.users.caches, utils.CacheInfo{
-				Name: aws.ToString(user.UserName),
-				Id:   aws.ToString(user.UserId),
+				Alias: aws.ToString(user.UserName),
+				Name:  aws.ToString(user.UserName),
+				Id:    aws.ToString(user.UserId),
 			})
 		}
 	}
@@ -92,8 +94,9 @@ func (c *caching) readGroups(client *iam.Client) error {
 
 		for _, group := range page.Groups {
 			c.groups.caches = append(c.groups.caches, utils.CacheInfo{
-				Name: aws.ToString(group.GroupName),
-				Id:   aws.ToString(group.GroupId),
+				Alias: aws.ToString(group.GroupName),
+				Name:  aws.ToString(group.GroupName),
+				Id:    aws.ToString(group.GroupId),
 			})
 		}
 	}
@@ -125,8 +128,9 @@ func (c *caching) readPolicies(ctx context.Context, client *iam.Client) error {
 
 		for _, policy := range page.Policies {
 			c.policies.caches = append(c.policies.caches, utils.CacheInfo{
-				Name: aws.ToString(policy.Arn),
-				Id:   aws.ToString(policy.PolicyId),
+				Alias: aws.ToString(policy.PolicyName),
+				Name:  aws.ToString(policy.Arn),
+				Id:    aws.ToString(policy.PolicyId),
 			})
 		}
 	}
@@ -145,8 +149,9 @@ func (c *caching) readRoles(client *iam.Client) error {
 
 		for _, role := range page.Roles {
 			c.roles.caches = append(c.roles.caches, utils.CacheInfo{
-				Name: aws.ToString(role.RoleName),
-				Id:   aws.ToString(role.RoleId),
+				Alias: aws.ToString(role.RoleName),
+				Name:  aws.ToString(role.RoleName),
+				Id:    aws.ToString(role.RoleId),
 			})
 		}
 	}
@@ -187,7 +192,14 @@ func (c *caching) readVirtualMFAs(ctx context.Context, client *iam.Client) error
 				return fmt.Errorf("caching readVirtualMFAs: %w", err)
 			}
 
+			var deviceAlias string
+			s := strings.Split(aws.ToString(device.SerialNumber), "mfa/")
+			if len(s) == 2 {
+				deviceAlias = s[1]
+			}
+
 			c.virtualMFAs.caches = append(c.virtualMFAs.caches, utils.CacheInfo{
+				Alias:   deviceAlias,
 				Name:    aws.ToString(device.SerialNumber),
 				Id:      aws.ToString(device.SerialNumber),
 				Content: string(normalizedDevice),
@@ -209,8 +221,9 @@ func (c *caching) readInstanceProfiles(client *iam.Client) error {
 
 		for _, profile := range page.InstanceProfiles {
 			c.instanceProfiles.caches = append(c.instanceProfiles.caches, utils.CacheInfo{
-				Name: aws.ToString(profile.InstanceProfileName),
-				Id:   aws.ToString(profile.InstanceProfileId),
+				Alias: aws.ToString(profile.InstanceProfileName),
+				Name:  aws.ToString(profile.InstanceProfileName),
+				Id:    aws.ToString(profile.InstanceProfileId),
 			})
 		}
 	}
