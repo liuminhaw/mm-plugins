@@ -10,16 +10,20 @@ plug "mm-iam" "GROUP_NAME" {
     }
     equipment "user" "sshPublicKey" {
         attributes = {
-            encoding = "SSH | PEM" (Todo)
+            # TODO: not implemented yet
+            encoding = "SSH | PEM" 
         }
     }
     equipment "policies" "list" {
         attributes = {
+            # The scope of the policy to mine for. Can be Local (default), AWS, or All.
             scope = "Local (default) | AWS | All"
         }
     }
     equipment "virtualMFADevices" "mine" {
         attributes = {
+            # The status of the virtual MFA device to mine for. 
+            # Can be Any (default), Assigned, or Unassigned.
             assignmentStatus = "Any (default) | Assigned | Unassigned"
         }
     }
