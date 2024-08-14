@@ -127,7 +127,6 @@ func mineResources(
 				log.Printf("mineResource: failed to get %s properties: %v", resourceType, err)
 			}
 		} else {
-			resource.Sort()
 			resources = append(resources, resource)
 		}
 	}

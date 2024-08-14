@@ -71,7 +71,6 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				log.Printf("mineResource: failed to get bucket %s properties: %v", aws.ToString(bucket.Name), err)
 			}
 		} else {
-			bucketResource.Sort()
 			resources = append(resources, bucketResource)
 		}
 
