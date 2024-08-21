@@ -24,15 +24,15 @@ func ConfigAuth(mineConfig shared.MinerConfig) (AwsProfile, error) {
 	}
 
 	// Read regions setting from config if exists
-	var err error
 	regions := []string{}
 	if _, ok := mineConfig.Auth["regions"]; !ok {
-		regions, err = helper.AwsRegions(
-			helper.AwsHelperAuth{Profile: mineConfig.Auth["profile"]},
-			false,
-		)
+		auth, err := helper.NewAwsHelperAuth(mineConfig.Auth["profile"])
 		if err != nil {
-			return AwsProfile{}, fmt.Errorf("configAuth: get regions: %w", err)
+			return AwsProfile{}, fmt.Errorf("configAuth: %w", err)
+		}
+		regions, err = auth.AwsRegions(false)
+		if err != nil {
+			return AwsProfile{}, fmt.Errorf("configAuth: %w", err)
 		}
 	} else {
 		regionsList := strings.Split(mineConfig.Auth["regions"], ",")
