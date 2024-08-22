@@ -34,7 +34,7 @@ func ConfigAuth(mineConfig shared.MinerConfig) (AwsProfile, error) {
 		if err != nil {
 			return AwsProfile{}, fmt.Errorf("configAuth: %w", err)
 		}
-	} else {
+	} else if mineConfig.Auth["regions"] != "" {
 		regionsList := strings.Split(mineConfig.Auth["regions"], ",")
 		for _, region := range regionsList {
 			regions = append(regions, strings.TrimSpace(region))

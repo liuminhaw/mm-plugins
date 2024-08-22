@@ -28,6 +28,18 @@ func TestConfigAuth(t *testing.T) {
 				Regions: []string{"us-west-1", "us-west-2", "ap-northeast-1"},
 			},
 		},
+        "EmptyRegions": {
+            config: shared.MinerConfig{
+                Auth: map[string]string{
+                    "profile": "testing",
+                    "regions": "",
+                },
+            },
+            want: AwsProfile{
+                Profile: "testing",
+                Regions: []string{},
+            },
+        },
 		"MissingProfile": {
 			config: shared.MinerConfig{},
 			err:    errors.New("configAuth: profile not found"),
