@@ -1,6 +1,9 @@
 package main
 
 const (
+    PLUG_NAME        = "mm-s3"
+    LIST_MAX_RESULTS = 100
+
 	accelerateConfig   = "AccelerateConfig"
 	analyticsConfig    = "AnalyticsConfig"
 	acl                = "Acl"

@@ -15,8 +15,6 @@ import (
 	"github.com/liuminhaw/mm-plugins/utils"
 )
 
-var PLUG_NAME = "mm-s3"
-
 // This is the implementation of Miner
 type Miner struct {
 	resources shared.MinerResources
@@ -37,44 +35,50 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 	)
 
 	client := s3.NewFromConfig(cfg)
-	bucketsOutput, err := client.ListBuckets(context.Background(), &s3.ListBucketsInput{})
-	if err != nil {
-		return nil, fmt.Errorf("mine: list buckets: %w", err)
-	}
+	paginator := s3.NewListBucketsPaginator(
+		client,
+		&s3.ListBucketsInput{MaxBuckets: aws.Int32(LIST_MAX_RESULTS)},
+	)
+    for paginator.HasMorePages() {
+        bucketsOutput, err := paginator.NextPage(context.Background())
+        if err != nil {
+            return nil, fmt.Errorf("mine: list buckets: %w", err)
+        }
 
-	for _, bucket := range bucketsOutput.Buckets {
-		log.Printf("Bucket: %s\n", *bucket.Name)
+        for _, bucket := range bucketsOutput.Buckets {
+            log.Printf("Bucket: %s\n", *bucket.Name)
 
-		bucketRegion, err := getBucketRegion(client, *bucket.Name)
-		if err != nil {
-			log.Printf("Failed to get bucket region: %v", err)
-			continue
-		}
+            bucketRegion, err := getBucketRegion(client, *bucket.Name)
+            if err != nil {
+                log.Printf("Failed to get bucket region: %v", err)
+                continue
+            }
 
-		cfg, err := config.LoadDefaultConfig(context.Background(),
-			config.WithSharedConfigProfile(string(awsAuth.Profile)),
-			config.WithRegion(bucketRegion),
-		)
+            cfg, err := config.LoadDefaultConfig(context.Background(),
+                config.WithSharedConfigProfile(string(awsAuth.Profile)),
+                config.WithRegion(bucketRegion),
+                )
 
-		serviceClient := newS3Client(s3.NewFromConfig(cfg), &bucket)
-		bucketResource, err := utils.GetProperties(
-			serviceClient,
-			aws.ToString(bucket.Name),
-			utils.CacheInfo{Name: location, Id: aws.ToString(bucket.Name), Content: bucketRegion},
-			propsConstructors,
-		)
-		if err != nil {
-			var configErr *utils.MMError
-			if errors.As(err, &configErr) {
-				log.Printf("No properties in bucket %s found", aws.ToString(bucket.Name))
-			} else {
-				log.Printf("mineResource: failed to get bucket %s properties: %v", aws.ToString(bucket.Name), err)
-			}
-		} else {
-			resources = append(resources, bucketResource)
-		}
+            serviceClient := newS3Client(s3.NewFromConfig(cfg), &bucket)
+            bucketResource, err := utils.GetProperties(
+                serviceClient,
+                aws.ToString(bucket.Name),
+                utils.CacheInfo{Name: location, Id: aws.ToString(bucket.Name), Content: bucketRegion},
+                propsConstructors,
+                )
+            if err != nil {
+                var configErr *utils.MMError
+                if errors.As(err, &configErr) {
+                    log.Printf("No properties in bucket %s found", aws.ToString(bucket.Name))
+                } else {
+                    log.Printf("mineResource: failed to get bucket %s properties: %v", aws.ToString(bucket.Name), err)
+                }
+            } else {
+                resources = append(resources, bucketResource)
+            }
 
-	}
+        }
+    }
 
 	return resources, nil
 }
