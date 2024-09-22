@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -62,7 +63,7 @@ func (m Miner) Mine(mineConfig shared.MinerConfig) (shared.MinerResources, error
 				sqsResource, err := utils.GetProperties(
 					serviceClient,
 					url,
-					utils.CacheInfo{},
+					queueNameCache(url),
 					propsConstructors,
 				)
 				if err != nil {
@@ -96,4 +97,11 @@ func main() {
 		GRPCServer: plugin.DefaultGRPCServer,
 	},
 	)
+}
+
+// queueNameCache returns a CacheInfo struct with the queue name as the alias.
+func queueNameCache(url string) utils.CacheInfo {
+	parts := strings.Split(url, "/")
+
+	return utils.CacheInfo{Alias: parts[len(parts)-1]}
 }
